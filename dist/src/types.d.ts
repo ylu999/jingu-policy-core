@@ -41,6 +41,7 @@ export type ReasoningFrame = {
     tradeoffs: string[];
     proposedIntervention: string;
     recurrencePrevention?: string;
+    nextStep?: string;
 };
 export type TaskContract = {
     objective: string;
