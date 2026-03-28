@@ -54,6 +54,8 @@ export type ReasoningFrame = {
   tradeoffs: string[]
   proposedIntervention: string
   recurrencePrevention?: string
+
+  nextStep: string           // 下一步（必须）
 }
 
 export type TaskContract = {
