@@ -8,13 +8,16 @@ export type {
   Claim,
   ReasoningFrame,
   TaskContract,
+  DiscoveryType,
+  Discovery,
+  ExecutionBudget,
   Input,
   Policy,
 } from "./types"
 
 export {
   P1, P2, P3, P4, P5, P6, P7, P8, P9,
-  P10, P11, P12, P13, P14, P15, P16,
+  P10, P11, P12, P13, P14, P15, P16, P17, P18, P19,
   disciplinePolicies,
   seniorPolicies,
   allPolicies,
@@ -40,13 +43,22 @@ export {
   p14MinimalIntervention,
   p15FutureIntegrity,
   p16ExternalizeContext,
+  p17ExternalizeOnDiscovery,
+  p18BlockerPrecedence,
+  p19ContextBudget,
 } from "./policies/senior"
 
 export { enforceReasoningFrame } from "./reasoning-gate"
 export type { ReasoningGateResult } from "./reasoning-gate"
 
 export { checkReasoningCoherence } from "./coherence-check"
-export type { CoherenceIssue, CoherenceResult } from "./coherence-check"
+export type {
+  CoherenceIssue,
+  CoherenceResult,
+  CoherenceJudge,
+  CoherenceJudgeInput,
+  CoherenceJudgeResult,
+} from "./coherence-check"
 
 export { evaluateV4, evaluateV4Sync } from "./evaluate-v4"
 export type { V4StageResult, V4RegimeResult, V4ReasoningRejectResult } from "./evaluate-v4"

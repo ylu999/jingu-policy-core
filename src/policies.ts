@@ -424,10 +424,21 @@ export const P16: Policy = (input: Input): Violation[] => {
   return violations
 }
 
+// ─── P17/P18/P19: Discovery Control cluster ──────────────────────────────────
+import {
+  p17ExternalizeOnDiscovery as _p17Impl,
+  p18BlockerPrecedence as _p18Impl,
+  p19ContextBudget as _p19Impl,
+} from "./policies/senior/p17-p19-discovery-control"
+
+export const P17: Policy = _p17Impl
+export const P18: Policy = _p18Impl
+export const P19: Policy = _p19Impl
+
 // ─── Policy Collections ───────────────────────────────────────────────────────
 export const allPolicies: Policy[] = [P1, P2, P3, P4, P5, P6, P7, P8, P9]
 
-export const seniorPolicies: Policy[] = [P10, P11, P12, P13, P14, P15, P16]
+export const seniorPolicies: Policy[] = [P10, P11, P12, P13, P14, P15, P16, P17, P18, P19]
 
 export const disciplinePolicies: Policy[] = [...allPolicies, ...seniorPolicies]
 
@@ -448,3 +459,6 @@ export const p13Tradeoff = P13
 export const p14MinimalIntervention = P14
 export const p15FutureIntegrity = P15
 export const p16ExternalizeContext = P16
+export const p17ExternalizeAndSplit = P17
+export const p18BlockerPrecedencePolicy = P18
+export const p19ContextBudgetPolicy = P19

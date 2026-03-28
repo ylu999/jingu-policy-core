@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = void 0;
+exports.p19ContextBudget = exports.p18BlockerPrecedence = exports.p17ExternalizeOnDiscovery = exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = void 0;
 var p10_core_tension_1 = require("./p10-core-tension");
 Object.defineProperty(exports, "p10CoreTension", { enumerable: true, get: function () { return p10_core_tension_1.p10CoreTension; } });
 var p11_layer_diagnosis_1 = require("./p11-layer-diagnosis");
@@ -15,3 +15,7 @@ var p15_future_integrity_1 = require("./p15-future-integrity");
 Object.defineProperty(exports, "p15FutureIntegrity", { enumerable: true, get: function () { return p15_future_integrity_1.p15FutureIntegrity; } });
 var p16_externalize_context_1 = require("./p16-externalize-context");
 Object.defineProperty(exports, "p16ExternalizeContext", { enumerable: true, get: function () { return p16_externalize_context_1.p16ExternalizeContext; } });
+var p17_p19_discovery_control_1 = require("./p17-p19-discovery-control");
+Object.defineProperty(exports, "p17ExternalizeOnDiscovery", { enumerable: true, get: function () { return p17_p19_discovery_control_1.p17ExternalizeOnDiscovery; } });
+Object.defineProperty(exports, "p18BlockerPrecedence", { enumerable: true, get: function () { return p17_p19_discovery_control_1.p18BlockerPrecedence; } });
+Object.defineProperty(exports, "p19ContextBudget", { enumerable: true, get: function () { return p17_p19_discovery_control_1.p19ContextBudget; } });

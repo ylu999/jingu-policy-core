@@ -5,3 +5,4 @@ export { p13Tradeoff } from "./p13-tradeoff";
 export { p14MinimalIntervention } from "./p14-minimal-intervention";
 export { p15FutureIntegrity } from "./p15-future-integrity";
 export { p16ExternalizeContext } from "./p16-externalize-context";
+export { p17ExternalizeOnDiscovery, p18BlockerPrecedence, p19ContextBudget, } from "./p17-p19-discovery-control";

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = exports.p9HypothesisSearch = exports.p8ClaimHonesty = exports.p7Hygiene = exports.p6BoundedExecution = exports.p5RespectAuthority = exports.p4GlobalInvariants = exports.p3FailureClassification = exports.p2Preconditions = exports.p1ConstraintObedience = exports.disciplinePolicies = exports.seniorPolicies = exports.allPolicies = exports.P16 = exports.P15 = exports.P14 = exports.P13 = exports.P12 = exports.P11 = exports.P10 = exports.P9 = exports.P8 = exports.P7 = exports.P6 = exports.P5 = exports.P4 = exports.P3 = exports.P2 = exports.P1 = void 0;
+exports.p19ContextBudgetPolicy = exports.p18BlockerPrecedencePolicy = exports.p17ExternalizeAndSplit = exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = exports.p9HypothesisSearch = exports.p8ClaimHonesty = exports.p7Hygiene = exports.p6BoundedExecution = exports.p5RespectAuthority = exports.p4GlobalInvariants = exports.p3FailureClassification = exports.p2Preconditions = exports.p1ConstraintObedience = exports.disciplinePolicies = exports.seniorPolicies = exports.allPolicies = exports.P19 = exports.P18 = exports.P17 = exports.P16 = exports.P15 = exports.P14 = exports.P13 = exports.P12 = exports.P11 = exports.P10 = exports.P9 = exports.P8 = exports.P7 = exports.P6 = exports.P5 = exports.P4 = exports.P3 = exports.P2 = exports.P1 = void 0;
 // ─── P1: Constraint Bypass ───────────────────────────────────────────────────
 // Agent proposes actions that violate explicit task constraints
 const P1 = (input) => {
@@ -375,9 +375,14 @@ const P16 = (input) => {
     return violations;
 };
 exports.P16 = P16;
+// ─── P17/P18/P19: Discovery Control cluster ──────────────────────────────────
+const p17_p19_discovery_control_1 = require("./policies/senior/p17-p19-discovery-control");
+exports.P17 = p17_p19_discovery_control_1.p17ExternalizeOnDiscovery;
+exports.P18 = p17_p19_discovery_control_1.p18BlockerPrecedence;
+exports.P19 = p17_p19_discovery_control_1.p19ContextBudget;
 // ─── Policy Collections ───────────────────────────────────────────────────────
 exports.allPolicies = [exports.P1, exports.P2, exports.P3, exports.P4, exports.P5, exports.P6, exports.P7, exports.P8, exports.P9];
-exports.seniorPolicies = [exports.P10, exports.P11, exports.P12, exports.P13, exports.P14, exports.P15, exports.P16];
+exports.seniorPolicies = [exports.P10, exports.P11, exports.P12, exports.P13, exports.P14, exports.P15, exports.P16, exports.P17, exports.P18, exports.P19];
 exports.disciplinePolicies = [...exports.allPolicies, ...exports.seniorPolicies];
 // ─── Named aliases (descriptive names) ───────────────────────────────────────
 exports.p1ConstraintObedience = exports.P1;
@@ -396,3 +401,6 @@ exports.p13Tradeoff = exports.P13;
 exports.p14MinimalIntervention = exports.P14;
 exports.p15FutureIntegrity = exports.P15;
 exports.p16ExternalizeContext = exports.P16;
+exports.p17ExternalizeAndSplit = exports.P17;
+exports.p18BlockerPrecedencePolicy = exports.P18;
+exports.p19ContextBudgetPolicy = exports.P19;

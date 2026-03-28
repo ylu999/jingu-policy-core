@@ -53,11 +53,28 @@ export type TaskContract = {
     };
     successCriteria?: string[];
 };
+export type DiscoveryType = "blocker" | "followup" | "separate_task";
+export type Discovery = {
+    id: string;
+    summary: string;
+    type: DiscoveryType;
+    impact?: string;
+    evidence?: string[];
+    spawnSuggested?: boolean;
+    resolvedInline?: boolean;
+};
+export type ExecutionBudget = {
+    openBranches?: number;
+    concurrentFindings?: number;
+    subsystemsTouched?: string[];
+};
 export type Input = {
     task: TaskContract;
     proposal: Proposal;
     evidence?: Evidence;
     claim?: Claim;
     reasoningFrame?: ReasoningFrame;
+    discoveries?: Discovery[];
+    executionBudget?: ExecutionBudget;
 };
 export type Policy = (input: Input) => Violation[];

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.evaluateV4Sync = exports.evaluateV4 = exports.checkReasoningCoherence = exports.enforceReasoningFrame = exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = exports.p9HypothesisSearch = exports.p8ClaimHonesty = exports.p7Hygiene = exports.p6BoundedExecution = exports.p5RespectAuthority = exports.p4GlobalInvariants = exports.p3FailureClassification = exports.p2Preconditions = exports.p1ConstraintObedience = exports.allPolicies = exports.seniorPolicies = exports.disciplinePolicies = exports.P16 = exports.P15 = exports.P14 = exports.P13 = exports.P12 = exports.P11 = exports.P10 = exports.P9 = exports.P8 = exports.P7 = exports.P6 = exports.P5 = exports.P4 = exports.P3 = exports.P2 = exports.P1 = void 0;
+exports.evaluateV4Sync = exports.evaluateV4 = exports.checkReasoningCoherence = exports.enforceReasoningFrame = exports.p19ContextBudget = exports.p18BlockerPrecedence = exports.p17ExternalizeOnDiscovery = exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = exports.p9HypothesisSearch = exports.p8ClaimHonesty = exports.p7Hygiene = exports.p6BoundedExecution = exports.p5RespectAuthority = exports.p4GlobalInvariants = exports.p3FailureClassification = exports.p2Preconditions = exports.p1ConstraintObedience = exports.allPolicies = exports.seniorPolicies = exports.disciplinePolicies = exports.P19 = exports.P18 = exports.P17 = exports.P16 = exports.P15 = exports.P14 = exports.P13 = exports.P12 = exports.P11 = exports.P10 = exports.P9 = exports.P8 = exports.P7 = exports.P6 = exports.P5 = exports.P4 = exports.P3 = exports.P2 = exports.P1 = void 0;
 var policies_1 = require("./policies");
 Object.defineProperty(exports, "P1", { enumerable: true, get: function () { return policies_1.P1; } });
 Object.defineProperty(exports, "P2", { enumerable: true, get: function () { return policies_1.P2; } });
@@ -18,6 +18,9 @@ Object.defineProperty(exports, "P13", { enumerable: true, get: function () { ret
 Object.defineProperty(exports, "P14", { enumerable: true, get: function () { return policies_1.P14; } });
 Object.defineProperty(exports, "P15", { enumerable: true, get: function () { return policies_1.P15; } });
 Object.defineProperty(exports, "P16", { enumerable: true, get: function () { return policies_1.P16; } });
+Object.defineProperty(exports, "P17", { enumerable: true, get: function () { return policies_1.P17; } });
+Object.defineProperty(exports, "P18", { enumerable: true, get: function () { return policies_1.P18; } });
+Object.defineProperty(exports, "P19", { enumerable: true, get: function () { return policies_1.P19; } });
 Object.defineProperty(exports, "disciplinePolicies", { enumerable: true, get: function () { return policies_1.disciplinePolicies; } });
 Object.defineProperty(exports, "seniorPolicies", { enumerable: true, get: function () { return policies_1.seniorPolicies; } });
 Object.defineProperty(exports, "allPolicies", { enumerable: true, get: function () { return policies_1.allPolicies; } });
@@ -39,6 +42,9 @@ Object.defineProperty(exports, "p13Tradeoff", { enumerable: true, get: function 
 Object.defineProperty(exports, "p14MinimalIntervention", { enumerable: true, get: function () { return senior_1.p14MinimalIntervention; } });
 Object.defineProperty(exports, "p15FutureIntegrity", { enumerable: true, get: function () { return senior_1.p15FutureIntegrity; } });
 Object.defineProperty(exports, "p16ExternalizeContext", { enumerable: true, get: function () { return senior_1.p16ExternalizeContext; } });
+Object.defineProperty(exports, "p17ExternalizeOnDiscovery", { enumerable: true, get: function () { return senior_1.p17ExternalizeOnDiscovery; } });
+Object.defineProperty(exports, "p18BlockerPrecedence", { enumerable: true, get: function () { return senior_1.p18BlockerPrecedence; } });
+Object.defineProperty(exports, "p19ContextBudget", { enumerable: true, get: function () { return senior_1.p19ContextBudget; } });
 var reasoning_gate_1 = require("./reasoning-gate");
 Object.defineProperty(exports, "enforceReasoningFrame", { enumerable: true, get: function () { return reasoning_gate_1.enforceReasoningFrame; } });
 var coherence_check_1 = require("./coherence-check");

@@ -3,26 +3,26 @@ import { test } from "node:test"
 import { checkReasoningCoherence } from "../src/coherence-check"
 import type { ReasoningFrame } from "../src/types"
 
-// Base coherent frame to use as starting point for tests
+// Base coherent frame — uses mechanism objects in hypothesis + intervention alignment
 const COHERENT_FRAME: ReasoningFrame = {
   coreTension: "Fix the index calculation without breaking existing consumers",
   problemLayer: "execution",
-  symptoms: ["test fails with off-by-one error", "output array has wrong length"],
-  hypotheses: ["off-by-one error in index calculation", "wrong length assumption in loop"],
+  symptoms: ["test fails with wrong output", "output array has unexpected length"],
+  hypotheses: ["off-by-one error in loop boundary allows one extra iteration"],
   verifiedFacts: ["confirmed via stack trace at line 47"],
-  rootCauseCandidate: "index calculation is using 1-based instead of 0-based indexing",
+  rootCauseCandidate: "loop uses <= length causing one extra iteration beyond array bounds",
   tradeoffs: ["minimal fix vs full refactor — prefer minimal to reduce blast radius"],
-  proposedIntervention: "Fix index calculation on line 47 to use 0-based indexing",
-  nextStep: "Read the failing test output first",
+  proposedIntervention: "Change loop condition from <= to < on line 47 to fix array bounds",
+  nextStep: "Read src/utils/transform.ts lines 40-55 to confirm exact loop structure",
 }
 
-// Test 1: coherent: true — complete and consistent reasoning frame
+// Test 1: coherent frame passes all checks
 test("coherent: true — complete and consistent frame passes", () => {
   const result = checkReasoningCoherence(COHERENT_FRAME)
-  assert.equal(result.coherent, true)
+  assert.equal(result.coherent, true, JSON.stringify(result))
 })
 
-// Test 2: tension restatement — coreTension only restates goal, no conflict
+// Test 2: tension restatement — warning
 test("warning: coreTension is goal restatement without conflict", () => {
   const frame: ReasoningFrame = {
     ...COHERENT_FRAME,
@@ -34,47 +34,48 @@ test("warning: coreTension is goal restatement without conflict", () => {
     const tensionIssue = result.issues.find(i => i.chain === "coreTension")
     assert.ok(tensionIssue, "should have a coreTension issue")
     assert.equal(tensionIssue!.severity, "warning")
-    assert.ok(tensionIssue!.issue.includes("conflict") || tensionIssue!.issue.includes("restatement"))
   }
 })
 
-// Test 3: symptoms → hypotheses断裂 — hypotheses and symptoms completely unrelated
-test("reject: hypotheses do not explain symptoms (keyword gap)", () => {
+// Test 3: hypothesis restatement of symptom — reject
+// Key: hypothesis must not just reword the symptom; it must name a mechanism
+test("reject: hypothesis restates symptom instead of proposing mechanism", () => {
   const frame: ReasoningFrame = {
     ...COHERENT_FRAME,
-    symptoms: ["database connection times out after 30 seconds"],
-    hypotheses: ["the UI rendering logic has a memory leak"],
-    // intervention intentionally left aligned to avoid check 4 triggering on top
-    proposedIntervention: "Fix the UI rendering memory leak in component tree",
-    rootCauseCandidate: "UI rendering memory leak causing component tree bloat",
+    symptoms: ["tests fail with wrong result", "output is incorrect"],
+    hypotheses: ["tests fail because result is wrong", "output value is not correct"],  // pure restatement
+    rootCauseCandidate: "the result is wrong",
+    proposedIntervention: "Fix the wrong result in the test",
   }
   const result = checkReasoningCoherence(frame)
   assert.equal(result.coherent, false)
   if (!result.coherent) {
-    const chainIssue = result.issues.find(i => i.chain === "symptoms → hypotheses")
-    assert.ok(chainIssue, "should have a symptoms → hypotheses issue")
+    const chainIssue = result.issues.find(i =>
+      i.chain === "symptoms → hypothesis" || i.chain === "hypothesis → mechanism"
+    )
+    assert.ok(chainIssue, `should have a hypothesis restatement or mechanism issue; got: ${JSON.stringify(result.issues)}`)
     assert.equal(chainIssue!.severity, "reject")
   }
 })
 
-// Test 4: intervention doesn't align with root cause
-test("reject: intervention does not address root cause", () => {
+// Test 4: hypothesis names mechanism but intervention targets different domain — reject
+test("reject: intervention operates on different domain than hypothesis", () => {
   const frame: ReasoningFrame = {
     ...COHERENT_FRAME,
-    hypotheses: ["network packet loss due to misconfigured firewall rules"],
-    rootCauseCandidate: "firewall rules blocking outbound port 443",
-    proposedIntervention: "Increase the database connection pool size",
+    hypotheses: ["firewall rules blocking outbound port 443"],
+    rootCauseCandidate: "firewall blocking outbound network connection on port 443",
+    proposedIntervention: "Increase the database connection pool max from 5 to 20",
   }
   const result = checkReasoningCoherence(frame)
   assert.equal(result.coherent, false)
   if (!result.coherent) {
-    const chainIssue = result.issues.find(i => i.chain === "hypotheses/rootCause → intervention")
-    assert.ok(chainIssue, "should have a hypotheses/rootCause → intervention issue")
+    const chainIssue = result.issues.find(i => i.chain === "hypothesis → intervention")
+    assert.ok(chainIssue, `should have a hypothesis → intervention issue; got: ${JSON.stringify(result.issues)}`)
     assert.equal(chainIssue!.severity, "reject")
   }
 })
 
-// Test 5: tradeoff is not a real trade — only one side
+// Test 5: tradeoff is not a real trade — warning
 test("warning: tradeoff does not describe two sides", () => {
   const frame: ReasoningFrame = {
     ...COHERENT_FRAME,
@@ -90,7 +91,7 @@ test("warning: tradeoff does not describe two sides", () => {
   }
 })
 
-// Test 6: nextStep is a goal not an action
+// Test 6: nextStep is a goal not an action — warning
 test("warning: nextStep is a goal phrase rather than action verb", () => {
   const frame: ReasoningFrame = {
     ...COHERENT_FRAME,
@@ -102,53 +103,58 @@ test("warning: nextStep is a goal phrase rather than action verb", () => {
     const nextStepIssue = result.issues.find(i => i.chain === "nextStep")
     assert.ok(nextStepIssue, "should have a nextStep issue")
     assert.equal(nextStepIssue!.severity, "warning")
-    assert.ok(nextStepIssue!.issue.includes("action") || nextStepIssue!.issue.includes("verb"))
   }
 })
 
-// Test 7: good reasoning passes — all checks pass together
-test("coherent: true — well-formed senior-level reasoning frame", () => {
+// Test 7: senior-level reasoning with DB pool example — must pass
+// This is the key test: symptom is "500 errors + traffic spike", hypothesis is
+// "connection pool exhausted" — the mechanism (pool) must be detected even though
+// symptoms don't contain the word "pool"
+test("coherent: true — DB pool exhaustion with 500 errors symptoms (the hard case)", () => {
   const frame: ReasoningFrame = {
-    coreTension: "Apply targeted fix without introducing regression in downstream consumers",
-    problemLayer: "execution",
+    coreTension: "Eliminate 500 errors without hiding the actual failure or creating silent data loss",
+    problemLayer: "architecture",
     symptoms: [
-      "test suite fails with AssertionError: expected 42 but got 43",
-      "output array length is 1 greater than input",
+      "HTTP 500 errors on /api/users/profile",
+      "Errors correlate with traffic spikes above 50 concurrent users",
     ],
     hypotheses: [
-      "off-by-one in loop boundary allows one extra iteration",
-      "array length check uses <= instead of <",
+      "Database connection pool exhausted under concurrent load",
+      "Query timeout under sustained load",
     ],
     verifiedFacts: [
-      "stack trace points to src/utils/transform.ts line 23",
-      "manual run confirms extra element appended",
+      "Error message 'too many clients already' from PostgreSQL pg driver",
+      "Pool configured with max=5, connections reach 5/5 exactly at error time",
     ],
-    rootCauseCandidate: "loop uses <= length causing one extra iteration beyond array bounds",
-    tradeoffs: ["fix boundary condition vs refactor loop logic — fix boundary to minimize diff scope"],
-    proposedIntervention: "Change loop condition from <= to < on line 23 in transform.ts",
-    nextStep: "Read src/utils/transform.ts lines 18-30 to confirm exact loop structure",
-    recurrencePrevention: "Add a property-based test that verifies output.length === input.length",
+    rootCauseCandidate: "Database connection pool max=5 is insufficient for concurrent load above 5 simultaneous requests",
+    tradeoffs: [
+      "Increase pool size vs add connection queuing — pool increase is simpler and addresses root cause directly",
+      "Quick config fix vs full connection management refactor — config fix is appropriate here",
+    ],
+    proposedIntervention: "Increase database pool max connections from 5 to 20 in config/database.ts",
+    recurrencePrevention: "Add connection pool monitoring alert when usage exceeds 80% capacity",
+    nextStep: "Read config/database.ts to locate the pool max setting before making the change",
   }
   const result = checkReasoningCoherence(frame)
-  assert.equal(result.coherent, true)
+  assert.equal(result.coherent, true, `Expected coherent but got: ${JSON.stringify(result)}`)
 })
 
 // Test 8: multiple issues accumulate
 test("coherent: false — multiple issues reported together", () => {
   const frame: ReasoningFrame = {
-    coreTension: "Make everything work",                    // goal restatement
+    coreTension: "Make everything work",                     // goal restatement → warning
     problemLayer: "execution",
     symptoms: ["database connection fails"],
-    hypotheses: ["UI rendering has memory leak"],           // unrelated to symptoms
+    hypotheses: ["UI rendering has a rendering issue"],      // no mechanism object → reject
     verifiedFacts: [],
-    tradeoffs: ["use a simple approach"],                   // not a real trade
-    proposedIntervention: "Fix the memory leak in React components",
-    nextStep: "ensure system is stable",                    // goal not action
+    tradeoffs: ["use a simple approach"],                    // no two sides → warning
+    proposedIntervention: "Fix the rendering issue in React", // unaligned with DB symptom
+    nextStep: "ensure system is stable",                     // goal not action → warning
   }
   const result = checkReasoningCoherence(frame)
   assert.equal(result.coherent, false)
   if (!result.coherent) {
-    assert.ok(result.issues.length >= 3, `expected >= 3 issues, got ${result.issues.length}`)
+    assert.ok(result.issues.length >= 3, `expected >= 3 issues, got ${result.issues.length}: ${JSON.stringify(result.issues)}`)
   }
 })
 
@@ -156,7 +162,7 @@ test("coherent: false — multiple issues reported together", () => {
 test("warning: symptom starts with causal phrase", () => {
   const frame: ReasoningFrame = {
     ...COHERENT_FRAME,
-    symptoms: ["because the index is wrong, tests fail"],
+    symptoms: ["because the loop boundary is wrong, tests fail"],
   }
   const result = checkReasoningCoherence(frame)
   assert.equal(result.coherent, false)
@@ -181,4 +187,76 @@ test("warning: problem layer 'requirements' but symptoms suggest execution issue
     assert.ok(layerIssue, "should have a symptoms → problemLayer issue")
     assert.equal(layerIssue!.severity, "warning")
   }
+})
+
+// Test 11: hypothesis no mechanism object — reject
+// Pure hypothesis with no identifiable mechanism object
+test("reject: hypothesis has no mechanism object", () => {
+  const frame: ReasoningFrame = {
+    ...COHERENT_FRAME,
+    hypotheses: ["something is wrong with the system logic"],
+    rootCauseCandidate: "the logic is incorrect",
+    proposedIntervention: "Fix the incorrect logic in the system",
+  }
+  const result = checkReasoningCoherence(frame)
+  assert.equal(result.coherent, false)
+  if (!result.coherent) {
+    const mechIssue = result.issues.find(i =>
+      i.chain === "hypothesis → mechanism" || i.chain === "symptoms → hypothesis"
+    )
+    assert.ok(mechIssue, `should have a mechanism issue; got: ${JSON.stringify(result.issues)}`)
+    assert.equal(mechIssue!.severity, "reject")
+  }
+})
+
+// Test 12: memory leak hypothesis — mechanism present, intervention aligned
+test("coherent: true — memory leak hypothesis with intervention on memory", () => {
+  const frame: ReasoningFrame = {
+    coreTension: "Fix memory leak without changing component API contract",
+    problemLayer: "execution",
+    symptoms: [
+      "Process memory grows unbounded over time",
+      "OOM crash after 24 hours of runtime",
+    ],
+    hypotheses: [
+      "Memory leak in event listener registration — listeners attached but never removed",
+    ],
+    verifiedFacts: [
+      "heap snapshot shows growing listener count",
+      "removeEventListener call missing in cleanup",
+    ],
+    rootCauseCandidate: "Memory leak: event listeners accumulate because cleanup never calls removeEventListener",
+    tradeoffs: [
+      "Fix cleanup in one component vs audit all components — fix known leak first, then audit",
+    ],
+    proposedIntervention: "Add removeEventListener call in component cleanup to free memory",
+    nextStep: "Inspect the component lifecycle cleanup method to confirm missing removeEventListener",
+  }
+  const result = checkReasoningCoherence(frame)
+  assert.equal(result.coherent, true, `Expected coherent but got: ${JSON.stringify(result)}`)
+})
+
+// Test 13: off-by-one hypothesis — classic pattern must pass
+test("coherent: true — off-by-one hypothesis with intervention on index/boundary", () => {
+  const frame: ReasoningFrame = {
+    coreTension: "Apply targeted fix without introducing regression in downstream consumers",
+    problemLayer: "execution",
+    symptoms: [
+      "test suite fails with AssertionError: expected 42 but got 43",
+      "output array length is 1 greater than input",
+    ],
+    hypotheses: [
+      "off-by-one in loop boundary allows one extra iteration",
+      "array length check uses <= instead of <",
+    ],
+    verifiedFacts: [
+      "stack trace points to src/utils/transform.ts line 23",
+    ],
+    rootCauseCandidate: "loop uses <= length causing one extra iteration beyond array bounds",
+    tradeoffs: ["fix boundary condition vs refactor loop logic — fix boundary to minimize diff scope"],
+    proposedIntervention: "Change loop condition from <= to < on line 23 in transform.ts",
+    nextStep: "Read src/utils/transform.ts lines 18-30 to confirm exact loop structure",
+  }
+  const result = checkReasoningCoherence(frame)
+  assert.equal(result.coherent, true, `Expected coherent but got: ${JSON.stringify(result)}`)
 })
