@@ -1,4 +1,5 @@
 import type { ReasoningFrame } from "./types"
+import { checkReasoningCoherence } from "./coherence-check.js"
 
 export type ReasoningGateResult =
   | { decision: "accept" }
@@ -10,6 +11,10 @@ export type ReasoningGateResult =
  * Gate 1 of evaluateV4 pipeline.
  * No action without reasoning.
  * If you can't explain it, you can't do it.
+ *
+ * Two layers of validation:
+ * 1. Field existence — required fields must be present and non-trivial
+ * 2. Coherence check — the reasoning chain must be internally consistent
  */
 export function enforceReasoningFrame(input: { reasoningFrame?: ReasoningFrame }): ReasoningGateResult {
   if (!input.reasoningFrame) {
@@ -63,6 +68,20 @@ export function enforceReasoningFrame(input: { reasoningFrame?: ReasoningFrame }
       reason: issues.join("; "),
       requiredFix: fixes,
     }
+  }
+
+  // Stage 2: Coherence check — validate the reasoning chain is internally consistent
+  const coherence = checkReasoningCoherence(f)
+  if (!coherence.coherent) {
+    const rejectIssues = coherence.issues.filter(i => i.severity === "reject")
+    if (rejectIssues.length > 0) {
+      return {
+        decision: "reject",
+        reason: rejectIssues.map(i => `[${i.chain}] ${i.issue}`).join("; "),
+        requiredFix: rejectIssues.map(i => `Fix ${i.chain}: ${i.issue.split(".")[0]}`),
+      }
+    }
+    // Only warnings — allow through (caller can inspect coherence result separately)
   }
 
   return { decision: "accept" }

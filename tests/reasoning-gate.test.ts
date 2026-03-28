@@ -5,13 +5,13 @@ import { enforceReasoningFrame } from "../src/reasoning-gate"
 test("accept when complete reasoning frame provided", () => {
   const result = enforceReasoningFrame({
     reasoningFrame: {
-      coreTension: "Must fix without breaking existing consumers",
+      coreTension: "Must fix index calculation without breaking existing consumers",
       problemLayer: "execution",
-      symptoms: ["test fails"],
-      hypotheses: ["off-by-one in index"],
+      symptoms: ["test fails with off-by-one error", "output index is wrong"],
+      hypotheses: ["off-by-one in index calculation", "wrong index boundary in loop"],
       verifiedFacts: ["confirmed via stack trace"],
-      tradeoffs: ["minimal fix vs full refactor"],
-      proposedIntervention: "Fix index calculation on line 47",
+      tradeoffs: ["minimal fix vs full refactor — prefer minimal to reduce blast radius"],
+      proposedIntervention: "Fix index calculation on line 47 to use 0-based indexing",
       nextStep: "Read the failing test output first",
     },
   })

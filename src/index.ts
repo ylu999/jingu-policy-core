@@ -45,5 +45,8 @@ export {
 export { enforceReasoningFrame } from "./reasoning-gate"
 export type { ReasoningGateResult } from "./reasoning-gate"
 
+export { checkReasoningCoherence } from "./coherence-check"
+export type { CoherenceIssue, CoherenceResult } from "./coherence-check"
+
 export { evaluateV4, evaluateV4Sync } from "./evaluate-v4"
 export type { V4StageResult, V4RegimeResult, V4ReasoningRejectResult } from "./evaluate-v4"
