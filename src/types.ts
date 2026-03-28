@@ -55,7 +55,7 @@ export type ReasoningFrame = {
   proposedIntervention: string
   recurrencePrevention?: string
 
-  nextStep: string           // 下一步（必须）
+  nextStep?: string          // 下一步（enforceReasoningFrame 会强制要求）
 }
 
 export type TaskContract = {
