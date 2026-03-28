@@ -5,19 +5,44 @@ import type { CoherenceJudge, CoherenceJudgeResult } from "./coherence-check.js"
 
 // ─── CoherenceJudgement (detailed semantic verdict) ─────────────────────────
 
+/**
+ * Classifies what kind of reasoning gap was found.
+ *
+ * missing_mechanism   — hypothesis doesn't name a causal component at all
+ * weak_causality      — hypothesis names something but the causal link to symptoms is implausible
+ * intervention_mismatch — intervention targets a different component than the hypothesis names
+ * generic_reasoning   — all parts present but too vague/circular to be falsifiable
+ */
+export type ReasoningGapType =
+  | "missing_mechanism"
+  | "weak_causality"
+  | "intervention_mismatch"
+  | "generic_reasoning"
+
 export type CoherenceJudgement = {
-  explains: boolean      // hypothesis plausibly explains the symptoms?
-  targets: boolean       // intervention operates on the hypothesis mechanism?
-  consistency: boolean   // reasoning chain internally consistent?
-  confidence: number     // 0–1
-  issues: string[]       // specific problems found
+  explains: boolean         // hypothesis plausibly explains the symptoms?
+  targets: boolean          // intervention operates on the hypothesis mechanism?
+  consistency: boolean      // reasoning chain internally consistent?
+  confidence: number        // 0–1
+  issues: string[]          // specific problems found
+  reasoningGapType?: ReasoningGapType  // primary failure category (undefined when coherent)
 }
 
 // ─── V5 result types ─────────────────────────────────────────────────────────
 
+/**
+ * Reject strength:
+ *   hard  — confidence >= 0.8 AND at least one link broken → do not execute
+ *   soft  — confidence in [0.6, 0.8) AND link broken → overridePossible=true
+ *           (caller can log + proceed with elevated risk, or escalate)
+ */
+export type SemanticRejectStrength = "hard" | "soft"
+
 export type V5SemanticResult = {
   stage: "semantic"
   decision: "accept" | "reject"
+  rejectStrength?: SemanticRejectStrength   // present only when decision === "reject"
+  overridePossible?: boolean                // true when soft reject
   judgement: CoherenceJudgement
   summary: string
 }
@@ -133,27 +158,60 @@ export async function evaluateV5WithJudgement(
     return v4
   }
 
-  // Merge rules (from spec):
-  // if !explains → reject
-  // if !targets → reject
-  // if !consistency → reject
-  // if confidence < 0.6 → reject
-  const shouldReject =
-    !judgement.explains ||
-    !judgement.targets ||
-    !judgement.consistency ||
-    judgement.confidence < 0.6
+  // ── Layer 3: dual-threshold merge ──────────────────────────────────────────
+  //
+  // confidence < 0.6              → reject (low confidence, don't trust either way)
+  // confidence in [0.6, 0.8)
+  //   + link broken               → SOFT reject (overridePossible=true)
+  //   + all links pass            → accept (judge unsure but leans coherent)
+  // confidence >= 0.8
+  //   + link broken               → HARD reject (LLM is confident about failure)
+  //   + all links pass            → accept
+  //
+  // Rationale: LLM judge is a strong signal, not an absolute authority.
+  // Soft reject preserves caller autonomy for borderline cases.
 
-  if (!shouldReject) return v4
+  const linkBroken = !judgement.explains || !judgement.targets || !judgement.consistency
+  const { confidence } = judgement
+
+  if (!linkBroken && confidence >= 0.6) return v4  // accept
 
   const issueText = judgement.issues.length > 0
     ? judgement.issues.join("; ")
     : "Reasoning chain lacks semantic coherence"
 
+  const gapTag = judgement.reasoningGapType ? ` [${judgement.reasoningGapType}]` : ""
+
+  if (confidence < 0.6) {
+    return {
+      stage: "semantic",
+      decision: "reject",
+      rejectStrength: "hard",
+      overridePossible: false,
+      judgement,
+      summary: `REJECTED (semantic/low-confidence=${confidence.toFixed(2)})${gapTag} — ${issueText}`,
+    }
+  }
+
+  if (confidence < 0.8) {
+    // soft reject — caller can override
+    return {
+      stage: "semantic",
+      decision: "reject",
+      rejectStrength: "soft",
+      overridePossible: true,
+      judgement,
+      summary: `SOFT-REJECTED (semantic, confidence=${confidence.toFixed(2)})${gapTag} — ${issueText}`,
+    }
+  }
+
+  // confidence >= 0.8 + link broken → hard reject
   return {
     stage: "semantic",
     decision: "reject",
+    rejectStrength: "hard",
+    overridePossible: false,
     judgement,
-    summary: `REJECTED (semantic, confidence=${judgement.confidence.toFixed(2)}) — ${issueText}`,
+    summary: `REJECTED (semantic, confidence=${confidence.toFixed(2)})${gapTag} — ${issueText}`,
   }
 }

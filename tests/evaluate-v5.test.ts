@@ -179,6 +179,44 @@ describe("evaluateV5WithJudgement — merge rules", () => {
     assert.equal(result.stage, "semantic")
     if (result.stage === "semantic") {
       assert.ok(result.summary.includes("0.50"))
+      assert.equal(result.rejectStrength, "hard")
+      assert.equal(result.overridePossible, false)
+    }
+  })
+
+  test("soft reject when confidence in [0.6, 0.8) and link broken", async () => {
+    const input = validInput()
+    const result = await evaluateV5WithJudgement(input, new RichIncoherentJudge({ explains: false, confidence: 0.7 }))
+    assert.equal(result.stage, "semantic")
+    if (result.stage === "semantic") {
+      assert.equal(result.rejectStrength, "soft")
+      assert.equal(result.overridePossible, true)
+      assert.ok(result.summary.includes("SOFT-REJECTED"))
+    }
+  })
+
+  test("hard reject when confidence >= 0.8 and link broken", async () => {
+    const input = validInput()
+    const result = await evaluateV5WithJudgement(input, new RichIncoherentJudge({ explains: false, confidence: 0.9 }))
+    assert.equal(result.stage, "semantic")
+    if (result.stage === "semantic") {
+      assert.equal(result.rejectStrength, "hard")
+      assert.equal(result.overridePossible, false)
+    }
+  })
+
+  test("reasoningGapType appears in summary", async () => {
+    const input = validInput()
+    const result = await evaluateV5WithJudgement(input, new RichIncoherentJudge({
+      explains: false,
+      confidence: 0.85,
+      reasoningGapType: "intervention_mismatch",
+      issues: ["fix targets wrong component"],
+    }))
+    assert.equal(result.stage, "semantic")
+    if (result.stage === "semantic") {
+      assert.ok(result.summary.includes("intervention_mismatch"))
+      assert.ok(result.judgement.reasoningGapType === "intervention_mismatch")
     }
   })
 
