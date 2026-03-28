@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = exports.p9HypothesisSearch = exports.p8ClaimHonesty = exports.p7Hygiene = exports.p6BoundedExecution = exports.p5RespectAuthority = exports.p4GlobalInvariants = exports.p3FailureClassification = exports.p2Preconditions = exports.p1ConstraintObedience = exports.disciplinePolicies = exports.seniorPolicies = exports.allPolicies = exports.P15 = exports.P14 = exports.P13 = exports.P12 = exports.P11 = exports.P10 = exports.P9 = exports.P8 = exports.P7 = exports.P6 = exports.P5 = exports.P4 = exports.P3 = exports.P2 = exports.P1 = void 0;
+exports.p16ExternalizeContext = exports.p15FutureIntegrity = exports.p14MinimalIntervention = exports.p13Tradeoff = exports.p12SymptomRootCause = exports.p11LayerDiagnosis = exports.p10CoreTension = exports.p9HypothesisSearch = exports.p8ClaimHonesty = exports.p7Hygiene = exports.p6BoundedExecution = exports.p5RespectAuthority = exports.p4GlobalInvariants = exports.p3FailureClassification = exports.p2Preconditions = exports.p1ConstraintObedience = exports.disciplinePolicies = exports.seniorPolicies = exports.allPolicies = exports.P16 = exports.P15 = exports.P14 = exports.P13 = exports.P12 = exports.P11 = exports.P10 = exports.P9 = exports.P8 = exports.P7 = exports.P6 = exports.P5 = exports.P4 = exports.P3 = exports.P2 = exports.P1 = void 0;
 // ─── P1: Constraint Bypass ───────────────────────────────────────────────────
 // Agent proposes actions that violate explicit task constraints
 const P1 = (input) => {
@@ -309,9 +309,75 @@ const P15 = (input) => {
     return [];
 };
 exports.P15 = P15;
+// ─── P16: Externalize Working Context (Senior) ───────────────────────────────
+// Agent acts without externalizing working context to durable artifacts
+const P16 = (input) => {
+    const violations = [];
+    const hasWriteOrCommand = input.proposal.plannedActions.some(a => a.type === "write" || a.type === "command");
+    const hasContextRef = input.evidence?.observations?.some(o => o.toLowerCase().includes(".jingu/context") ||
+        o.toLowerCase().includes("active-task") ||
+        o.toLowerCase().includes("working context")) ||
+        input.evidence?.commandResults?.some(r => r.toLowerCase().includes(".jingu/context") ||
+            r.toLowerCase().includes("active-task"));
+    if (hasWriteOrCommand && !hasContextRef && !input.reasoningFrame?.coreTension) {
+        violations.push({
+            policyId: "P16",
+            severity: "reject",
+            message: "Context not externalized before action. Write working context (facts, hypotheses, plan, next step) to .jingu/context/ before proposing mutations.",
+        });
+    }
+    const sameFailures = (input.evidence?.failureSignals || []).filter(f => f === "same_failure").length;
+    if (sameFailures >= 2) {
+        const contextUpdated = input.evidence?.observations?.some(o => o.toLowerCase().includes("updated context") ||
+            o.toLowerCase().includes("context updated") ||
+            o.toLowerCase().includes("active-task updated"));
+        if (!contextUpdated) {
+            violations.push({
+                policyId: "P16",
+                severity: "reject",
+                message: "Retry detected without updating working context. Before retrying, update .jingu/context/active-task with new failure facts and revised hypotheses.",
+            });
+        }
+    }
+    const hasClaim = (input.claim?.statements || []).some(s => {
+        const lower = s.toLowerCase();
+        return (lower.includes("completed") ||
+            lower.includes("resolved") ||
+            lower.includes("done") ||
+            lower.includes("fixed") ||
+            lower.includes("deployed"));
+    });
+    const hasEvidenceSummary = (input.evidence?.commandResults || []).length > 0 ||
+        input.evidence?.observations?.some(o => o.toLowerCase().includes("evidence") ||
+            o.toLowerCase().includes("verified") ||
+            o.toLowerCase().includes("confirmed"));
+    if (hasClaim && !hasEvidenceSummary) {
+        violations.push({
+            policyId: "P16",
+            severity: "reject",
+            message: "Completion claim made without durable evidence summary. Write final working state and evidence refs to .jingu/context/ before claiming completion.",
+        });
+    }
+    const frame = input.reasoningFrame;
+    if (frame) {
+        const isHollow = frame.coreTension.length < 10 &&
+            frame.symptoms.length === 0 &&
+            frame.hypotheses.length === 0 &&
+            frame.verifiedFacts.length === 0;
+        if (isHollow) {
+            violations.push({
+                policyId: "P16",
+                severity: "warning",
+                message: "ReasoningFrame exists but is empty — working context not externalized. Fill in known facts, hypotheses, and current plan.",
+            });
+        }
+    }
+    return violations;
+};
+exports.P16 = P16;
 // ─── Policy Collections ───────────────────────────────────────────────────────
 exports.allPolicies = [exports.P1, exports.P2, exports.P3, exports.P4, exports.P5, exports.P6, exports.P7, exports.P8, exports.P9];
-exports.seniorPolicies = [exports.P10, exports.P11, exports.P12, exports.P13, exports.P14, exports.P15];
+exports.seniorPolicies = [exports.P10, exports.P11, exports.P12, exports.P13, exports.P14, exports.P15, exports.P16];
 exports.disciplinePolicies = [...exports.allPolicies, ...exports.seniorPolicies];
 // ─── Named aliases (descriptive names) ───────────────────────────────────────
 exports.p1ConstraintObedience = exports.P1;
@@ -329,3 +395,4 @@ exports.p12SymptomRootCause = exports.P12;
 exports.p13Tradeoff = exports.P13;
 exports.p14MinimalIntervention = exports.P14;
 exports.p15FutureIntegrity = exports.P15;
+exports.p16ExternalizeContext = exports.P16;

@@ -37,21 +37,21 @@ function makeInput(frame) {
     (0, node_test_1.it)("rejects when symptoms is empty", () => {
         const result = (0, p12_symptom_root_cause_1.p12SymptomRootCause)(makeInput(makeFrame({ symptoms: [] })));
         const symptomViolation = result.find((v) => v.message.includes("symptoms"));
-        strict_1.default.ok(symptomViolation);
+        strict_1.default.ok(symptomViolation !== undefined, "expected a symptoms violation");
         strict_1.default.equal(symptomViolation.policyId, "P12");
         strict_1.default.equal(symptomViolation.severity, "reject");
     });
     (0, node_test_1.it)("rejects when hypotheses is empty", () => {
         const result = (0, p12_symptom_root_cause_1.p12SymptomRootCause)(makeInput(makeFrame({ hypotheses: [] })));
         const hypothesisViolation = result.find((v) => v.message.includes("hypotheses"));
-        strict_1.default.ok(hypothesisViolation);
+        strict_1.default.ok(hypothesisViolation !== undefined, "expected a hypotheses violation");
         strict_1.default.equal(hypothesisViolation.policyId, "P12");
         strict_1.default.equal(hypothesisViolation.severity, "reject");
     });
     (0, node_test_1.it)("warns when verifiedFacts is empty", () => {
         const result = (0, p12_symptom_root_cause_1.p12SymptomRootCause)(makeInput(makeFrame({ verifiedFacts: [] })));
         const factViolation = result.find((v) => v.message.includes("verifiedFacts"));
-        strict_1.default.ok(factViolation);
+        strict_1.default.ok(factViolation !== undefined, "expected a verifiedFacts warning");
         strict_1.default.equal(factViolation.policyId, "P12");
         strict_1.default.equal(factViolation.severity, "warning");
     });
