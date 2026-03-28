@@ -62,3 +62,11 @@ export type {
 
 export { evaluateV4, evaluateV4Sync } from "./evaluate-v4"
 export type { V4StageResult, V4RegimeResult, V4ReasoningRejectResult } from "./evaluate-v4"
+
+export { evaluateV5, evaluateV5WithJudgement } from "./evaluate-v5"
+export type {
+  CoherenceJudgement,
+  V5SemanticResult,
+  V5StageResult,
+  RichCoherenceJudge,
+} from "./evaluate-v5"
