@@ -6,10 +6,15 @@ export type ReasoningGateResult =
   | { decision: "accept" }
   | { decision: "reject"; reason: string; requiredFix: string[] }
 
+export type Grade = "A" | "B" | "C" | "D" | "F"
+
 export type V4RegimeResult = {
   stage: "regime"
   decision: "accept" | "reject" | "block"
   score: number
+  seniorityScore: number
+  overallScore: number
+  grade: Grade
   violations: Violation[]
   reasoningViolations: Violation[]
   summary: string
@@ -33,6 +38,14 @@ function scoreFromViolations(violations: Violation[], policyCount: number): numb
   }, 0)
   const maxPenalty = policyCount * 3
   return Math.max(0, Math.round(100 - (penalty / maxPenalty) * 100))
+}
+
+export function gradeFromScore(score: number): Grade {
+  if (score >= 90) return "A"
+  if (score >= 75) return "B"
+  if (score >= 60) return "C"
+  if (score >= 40) return "D"
+  return "F"
 }
 
 function decideFromViolations(violations: Violation[], reasoningViolations: Violation[]): "accept" | "reject" | "block" {
@@ -75,25 +88,32 @@ export function evaluateV4(input: Input): V4StageResult {
   }
 
   const score = scoreFromViolations(violations, allPolicies.length)
+  const seniorityScore = scoreFromViolations(reasoningViolations, seniorPolicies.length)
+  // Weighted: discipline 60%, seniority 40%
+  const overallScore = Math.round(score * 0.6 + seniorityScore * 0.4)
+  const grade = gradeFromScore(overallScore)
   const decision = decideFromViolations(violations, reasoningViolations)
 
   const total = violations.length + reasoningViolations.length
   let summary: string
   if (decision === "block") {
     const blocked = [...violations, ...reasoningViolations].filter(v => v.severity === "block")
-    summary = `BLOCKED — ${blocked.length} critical violation(s). Score: ${score}/100.`
+    summary = `BLOCKED — ${blocked.length} critical violation(s). Score: ${overallScore}/100 (${grade}).`
   } else if (decision === "reject") {
-    summary = `REJECTED — ${total} violation(s). Score: ${score}/100.`
+    summary = `REJECTED — ${total} violation(s). Score: ${overallScore}/100 (${grade}).`
   } else if (total > 0) {
-    summary = `ACCEPTED with warnings — ${total} issue(s). Score: ${score}/100.`
+    summary = `ACCEPTED with warnings — ${total} issue(s). Score: ${overallScore}/100 (${grade}).`
   } else {
-    summary = `ACCEPTED — No violations. Score: ${score}/100.`
+    summary = `ACCEPTED — No violations. Score: ${overallScore}/100 (${grade}).`
   }
 
   return {
     stage: "regime",
     decision,
     score,
+    seniorityScore,
+    overallScore,
+    grade,
     violations,
     reasoningViolations,
     summary,

@@ -60,8 +60,8 @@ export type {
   CoherenceJudgeResult,
 } from "./coherence-check"
 
-export { evaluateV4, evaluateV4Sync } from "./evaluate-v4"
-export type { V4StageResult, V4RegimeResult, V4ReasoningRejectResult } from "./evaluate-v4"
+export { evaluateV4, evaluateV4Sync, gradeFromScore } from "./evaluate-v4"
+export type { V4StageResult, V4RegimeResult, V4ReasoningRejectResult, Grade } from "./evaluate-v4"
 
 export { evaluateV5, evaluateV5WithJudgement } from "./evaluate-v5"
 export type {

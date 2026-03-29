@@ -7,10 +7,12 @@
   "exports": {
     ".": {
       "import": "./dist/src/index.js",
+      "require": "./dist/src/index.js",
       "types": "./dist/src/index.d.ts"
     },
     "./rpp": {
       "import": "./dist/src/rpp/rpp.types.js",
+      "require": "./dist/src/rpp/rpp.types.js",
       "types": "./dist/src/rpp/rpp.types.d.ts"
     }
   },
