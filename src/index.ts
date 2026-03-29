@@ -70,3 +70,7 @@ export type {
   V5StageResult,
   RichCoherenceJudge,
 } from "./evaluate-v5"
+
+export * from "./rpp/rpp.types.js"
+export * from "./rpp/rpp.failures.js"
+export { validateRPP } from "./rpp/rpp.validate.js"
