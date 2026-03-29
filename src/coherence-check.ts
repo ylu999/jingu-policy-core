@@ -1,4 +1,4 @@
-import type { ReasoningFrame } from "./types.js"
+import type { ReasoningFrame, TypedClaim, Evidence } from "./types.js"
 
 export type CoherenceIssue = {
   chain: string        // which part of the chain is broken, e.g. "symptoms → hypotheses"
@@ -24,8 +24,57 @@ export type CoherenceResult =
  * - Checks for INTERVENTION ALIGNMENT: fix must operate on the same mechanism the hypothesis names
  * - Checks for NON-RESTATEMENT: hypothesis must add explanatory content beyond symptoms
  */
-export function checkReasoningCoherence(frame: ReasoningFrame): CoherenceResult {
+export function checkReasoningCoherence(
+  frame: ReasoningFrame,
+  typedClaims?: TypedClaim[],
+  evidence?: Evidence,
+): CoherenceResult {
   const issues: CoherenceIssue[] = []
+
+  // --- Typed claim evidence binding check (runs before mechanism chain) ---
+  // When typed hypothesis/diagnosis claims are provided, each must have at least
+  // one evidenceRef pointing to an evidence item that actually exists.
+  // This is the first formal claim→evidence constraint in the coherence check.
+  if (typedClaims && typedClaims.length > 0) {
+    const hypothesisClaims = typedClaims.filter(
+      c => c.type === "hypothesis" || c.type === "diagnosis"
+    )
+    if (hypothesisClaims.length > 0) {
+      const evidenceIds = new Set((evidence?.items ?? []).map(e => e.id))
+      for (const claim of hypothesisClaims) {
+        if (claim.evidenceRefs.length === 0) {
+          issues.push({
+            chain: "claim → evidence",
+            issue: `Typed ${claim.type} claim "${claim.id}" has no evidence references. Every hypothesis/diagnosis claim must cite at least one evidence item.`,
+            severity: "reject",
+          })
+        } else if (evidenceIds.size > 0) {
+          // Only check ref validity when evidence.items exists (typed evidence present)
+          const dangling = claim.evidenceRefs.filter(ref => !evidenceIds.has(ref))
+          if (dangling.length > 0) {
+            issues.push({
+              chain: "claim → evidence",
+              issue: `Typed ${claim.type} claim "${claim.id}" references non-existent evidence IDs: ${dangling.join(", ")}`,
+              severity: "reject",
+            })
+          }
+        }
+      }
+    }
+  }
+
+  // Derive effective hypothesis text: prefer typed claims, fallback to frame.hypotheses
+  const typedHypothesisText = typedClaims
+    ?.filter(c => c.type === "hypothesis" || c.type === "diagnosis")
+    .map(c => c.text)
+    .join(" ") ?? ""
+
+  const effectiveHypotheses: string[] =
+    typedHypothesisText.length > 0
+      ? typedClaims!
+          .filter(c => c.type === "hypothesis" || c.type === "diagnosis")
+          .map(c => c.text)
+      : frame.hypotheses
 
   // Check 1: coreTension must describe a CONFLICT, not just restate the goal
   const tensionHasConflict = containsConflictPattern(frame.coreTension)
@@ -50,30 +99,18 @@ export function checkReasoningCoherence(frame: ReasoningFrame): CoherenceResult 
 
   // Check 3: hypothesis → mechanism → intervention alignment
   //
-  // This replaces keyword-overlap with three structural checks:
-  //
-  //   3a. Non-restatement: hypothesis must not simply rewrite symptom text
-  //   3b. Mechanism presence: hypothesis must name a mechanism object
-  //       (a resource, component, boundary, config, state constraint, dependency)
-  //   3c. Intervention alignment: the intervention must operate on the same mechanism
-  //       the hypothesis names — not a different system component entirely
-  //
-  // Rationale: keyword overlap was too easily gamed (add hypothesis words to symptoms).
-  // "mechanism object" presence + intervention alignment is harder to fake without
-  // actually writing a coherent causal chain.
-  if (frame.hypotheses.length > 0 && frame.proposedIntervention) {
-    const mechanismCheck = checkMechanismChain(frame)
+  // Uses effectiveHypotheses: typed hypothesis/diagnosis claims when available,
+  // otherwise falls back to frame.hypotheses.
+  if (effectiveHypotheses.length > 0 && frame.proposedIntervention) {
+    const mechanismCheck = checkMechanismChain(frame, effectiveHypotheses)
     if (mechanismCheck) {
       issues.push(mechanismCheck)
     }
   }
 
-  // Check 4 (legacy — retained for cases where check 3 doesn't fire):
-  // If hypothesis has mechanism objects AND intervention exists, but they point
-  // to completely different domains, reject.
-  // NOTE: this is now a backstop for check 3, not the primary check.
-  if (frame.hypotheses.length > 0 && frame.proposedIntervention && !issues.find(i => i.chain === "hypothesis → intervention")) {
-    const domainMismatch = checkDomainMismatch(frame)
+  // Check 4 (legacy backstop — domain mismatch for cases where check 3 doesn't fire)
+  if (effectiveHypotheses.length > 0 && frame.proposedIntervention && !issues.find(i => i.chain === "hypothesis → intervention")) {
+    const domainMismatch = checkDomainMismatch(frame, effectiveHypotheses)
     if (domainMismatch) {
       issues.push(domainMismatch)
     }
@@ -145,8 +182,8 @@ export interface CoherenceJudge {
 
 // --- Check 3: mechanism chain validation ---
 
-function checkMechanismChain(frame: ReasoningFrame): CoherenceIssue | null {
-  const hypothesisText = frame.hypotheses.join(" ").toLowerCase()
+function checkMechanismChain(frame: ReasoningFrame, hypotheses?: string[]): CoherenceIssue | null {
+  const hypothesisText = (hypotheses ?? frame.hypotheses).join(" ").toLowerCase()
   const symptomText = frame.symptoms.join(" ").toLowerCase()
   const interventionText = frame.proposedIntervention!.toLowerCase()
 
@@ -201,8 +238,8 @@ function checkMechanismChain(frame: ReasoningFrame): CoherenceIssue | null {
 // Check 4 backstop: domain-level mismatch
 // Used when mechanism objects are absent or ambiguous — catches gross mismatches
 // like "hypothesis about network" + "intervention about database schema"
-function checkDomainMismatch(frame: ReasoningFrame): CoherenceIssue | null {
-  const hypothesisText = frame.hypotheses.join(" ").toLowerCase()
+function checkDomainMismatch(frame: ReasoningFrame, hypotheses?: string[]): CoherenceIssue | null {
+  const hypothesisText = (hypotheses ?? frame.hypotheses).join(" ").toLowerCase()
   const interventionText = frame.proposedIntervention!.toLowerCase()
   const rootCauseText = (frame.rootCauseCandidate || "").toLowerCase()
 

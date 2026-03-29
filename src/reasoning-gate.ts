@@ -1,4 +1,4 @@
-import type { ReasoningFrame } from "./types"
+import type { ReasoningFrame, TypedClaim, Evidence } from "./types"
 import { checkReasoningCoherence } from "./coherence-check.js"
 
 export type ReasoningGateResult =
@@ -16,7 +16,11 @@ export type ReasoningGateResult =
  * 1. Field existence — required fields must be present and non-trivial
  * 2. Coherence check — the reasoning chain must be internally consistent
  */
-export function enforceReasoningFrame(input: { reasoningFrame?: ReasoningFrame }): ReasoningGateResult {
+export function enforceReasoningFrame(input: {
+  reasoningFrame?: ReasoningFrame
+  claim?: { typed?: TypedClaim[] }
+  evidence?: Evidence
+}): ReasoningGateResult {
   if (!input.reasoningFrame) {
     return {
       decision: "reject",
@@ -71,7 +75,7 @@ export function enforceReasoningFrame(input: { reasoningFrame?: ReasoningFrame }
   }
 
   // Stage 2: Coherence check — validate the reasoning chain is internally consistent
-  const coherence = checkReasoningCoherence(f)
+  const coherence = checkReasoningCoherence(f, input.claim?.typed, input.evidence)
   if (!coherence.coherent) {
     const rejectIssues = coherence.issues.filter(i => i.severity === "reject")
     if (rejectIssues.length > 0) {
