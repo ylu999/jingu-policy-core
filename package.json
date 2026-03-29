@@ -21,6 +21,9 @@
     "test": "node --test 'dist/tests/**/*.test.js' 'dist/tests/*.test.js' 'dist/src/**/*.test.js'",
     "test:src": "npx tsc --noEmit"
   },
+  "dependencies": {
+    "@jingu/protocol": "file:../jingu-protocol"
+  },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "typescript": "^6.0.2"
