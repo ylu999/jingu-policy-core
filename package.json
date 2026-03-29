@@ -1,5 +1,5 @@
 {
-  "name": "@jingu/policy-core",
+  "name": "jingu-policy-core",
   "version": "0.1.0",
   "description": "Engineering discipline policy library for Jingu Trust-Gate",
   "main": "dist/src/index.js",
@@ -22,7 +22,7 @@
     "test:src": "npx tsc --noEmit"
   },
   "dependencies": {
-    "@jingu/protocol": "file:../jingu-protocol"
+    "jingu-protocol": "file:../jingu-protocol"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",

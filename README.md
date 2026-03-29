@@ -18,14 +18,14 @@ Zero runtime dependencies. No I/O. No side effects. Same input → same output.
 ## Installation
 
 ```bash
-npm install @jingu/policy-core
+npm install jingu-policy-core
 ```
 
 ## Quick start
 
 ```typescript
-import { evaluateV4 } from "@jingu/policy-core"
-import type { Input } from "@jingu/policy-core"
+import { evaluateV4 } from "jingu-policy-core"
+import type { Input } from "jingu-policy-core"
 
 const input: Input = {
   task: {
@@ -111,8 +111,8 @@ decision     = accept / reject / block
 ### V5: optional LLM semantic judge
 
 ```typescript
-import { evaluateV5WithJudgement } from "@jingu/policy-core"
-import type { RichCoherenceJudge } from "@jingu/policy-core"
+import { evaluateV5WithJudgement } from "jingu-policy-core"
+import type { RichCoherenceJudge } from "jingu-policy-core"
 
 // Provide your own LLM-backed judge (e.g. from jingu-agent)
 const result = await evaluateV5WithJudgement(input, myLLMJudge)
@@ -152,11 +152,11 @@ P8 (Claim Honesty) enforces: `∀ typed claim → claim.evidenceRefs ⊆ evidenc
 
 Per-call cognitive audit contract. Every reasoning step must be traceable to evidence, rules, or methods.
 
-RPP types are defined in [`@jingu/protocol`](https://github.com/ylu999/jingu-protocol) and re-exported here for backward compatibility.
+RPP types are defined in [`jingu-protocol`](https://github.com/ylu999/jingu-protocol) and re-exported here for backward compatibility.
 
 ```typescript
-import { validateRPP } from "@jingu/policy-core"
-import type { RPPRecord } from "@jingu/policy-core"
+import { validateRPP } from "jingu-policy-core"
+import type { RPPRecord } from "jingu-policy-core"
 
 const result = validateRPP(record)
 // result.overall_status: "valid" | "weakly_supported" | "invalid"
@@ -165,21 +165,21 @@ const result = validateRPP(record)
 Or import directly from the source package:
 
 ```typescript
-import { validateRPP } from "@jingu/protocol"
-import type { RPPRecord } from "@jingu/protocol"
+import { validateRPP } from "jingu-protocol"
+import type { RPPRecord } from "jingu-protocol"
 ```
 
 ## Architecture
 
 ```
-@jingu/protocol   ← jingu-policy-core   (re-exports RPP types)
-@jingu/protocol   ← jingu-trust-gate    (RPP admission gate)
+jingu-protocol   ← jingu-policy-core   (re-exports RPP types)
+jingu-protocol   ← jingu-trust-gate    (RPP admission gate)
 jingu-core        ← jingu-policy-core   (policy evaluator)
 jingu-core        ← jingu-agent         (LLM intelligence — private)
 ```
 
-**Dependency direction**: `policy-core → @jingu/protocol → (nothing)`.
-`trust-gate` depends on `@jingu/protocol` directly — not on `policy-core`.
+**Dependency direction**: `policy-core → jingu-protocol → (nothing)`.
+`trust-gate` depends on `jingu-protocol` directly — not on `policy-core`.
 Policy-core has no knowledge of enforcement, execution, or runtime layers.
 
 ## Development

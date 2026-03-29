@@ -1,4 +1,4 @@
-// src/rpp/rpp.types.ts — re-exported from @jingu/protocol
+// src/rpp/rpp.types.ts — re-exported from jingu-protocol
 export type {
   EvidenceRef,
   RuleRef,
@@ -10,4 +10,4 @@ export type {
   RPPFailureCode,
   RPPFailure,
   RPPValidationResult,
-} from "@jingu/protocol"
+} from "jingu-protocol"
