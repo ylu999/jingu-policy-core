@@ -184,10 +184,8 @@ const HIGH_RISK_PACK: PolicyPack = {
 // Resolver
 // ---------------------------------------------------------------------------
 
-const VALID_TASK_TYPES = new Set<string>([
-  "problem_framing", "reasoning", "design", "execution", "verification",
-  "planning", "communication", "learning", "debugging", "incident",
-])
+// Derived from POLICY_PACKS keys — single source of truth, no separate maintenance
+const VALID_TASK_TYPES = new Set<string>(Object.keys(POLICY_PACKS))
 
 const VALID_RISK_LEVELS = new Set<string>(["low", "medium", "high", "critical"])
 
@@ -199,13 +197,18 @@ export function resolvePolicies(ctx: TaskContext): ExecutionConfig {
     throw new Error(`unknown risk_level: ${ctx.risk_level}`)
   }
 
-  const packs: PolicyPack[] = [GLOBAL_PACK, POLICY_PACKS[ctx.task_type]]
+  // Shallow-copy each pack so callers cannot mutate global constants
+  const packs: PolicyPack[] = [
+    { ...GLOBAL_PACK },
+    { ...POLICY_PACKS[ctx.task_type] },
+  ]
 
   if (ctx.risk_level === "high" || ctx.risk_level === "critical") {
-    packs.push(HIGH_RISK_PACK)
+    packs.push({ ...HIGH_RISK_PACK })
   }
 
-  // Flat deduplicated gate list — order: global first, task-type second, risk last
+  // Flat deduplicated gate list — order: global first, task-type second, risk last.
+  // gatesSeen is built here and intentionally reused for flag dedup below.
   const gatesSeen = new Set<string>()
   const required_gates: string[] = []
   for (const pack of packs) {
@@ -217,7 +220,7 @@ export function resolvePolicies(ctx: TaskContext): ExecutionConfig {
     }
   }
 
-  // Extra gates from flags
+  // Flag-driven gates — must run after pack traversal so gatesSeen reflects all pack gates
   if (ctx.is_irreversible && !gatesSeen.has("rollback_gate")) {
     required_gates.push("rollback_gate")
   }
@@ -225,7 +228,7 @@ export function resolvePolicies(ctx: TaskContext): ExecutionConfig {
     required_gates.push("scope_gate")
   }
 
-  // Reviewer mode
+  // Reviewer mode: critical → required; high or pack has reviewer_checks → optional; else none
   const hasReviewerChecks = packs.some(p => p.reviewer_checks.length > 0)
   let reviewer_mode: ReviewerMode
   if (ctx.risk_level === "critical") {
