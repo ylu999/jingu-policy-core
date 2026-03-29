@@ -152,6 +152,8 @@ P8 (Claim Honesty) enforces: `∀ typed claim → claim.evidenceRefs ⊆ evidenc
 
 Per-call cognitive audit contract. Every reasoning step must be traceable to evidence, rules, or methods.
 
+RPP types are defined in [`@jingu/protocol`](https://github.com/ylu999/jingu-protocol) and re-exported here for backward compatibility.
+
 ```typescript
 import { validateRPP } from "@jingu/policy-core"
 import type { RPPRecord } from "@jingu/policy-core"
@@ -160,15 +162,24 @@ const result = validateRPP(record)
 // result.overall_status: "valid" | "weakly_supported" | "invalid"
 ```
 
+Or import directly from the source package:
+
+```typescript
+import { validateRPP } from "@jingu/protocol"
+import type { RPPRecord } from "@jingu/protocol"
+```
+
 ## Architecture
 
 ```
-jingu-core  ←  jingu-agent      (LLM intelligence — private)
-jingu-core  ←  jingu-policy-core  ← you are here
-jingu-core  ←  trust-gate       (enforcement layer — uses policy-core)
+@jingu/protocol   ← jingu-policy-core   (re-exports RPP types)
+@jingu/protocol   ← jingu-trust-gate    (RPP admission gate)
+jingu-core        ← jingu-policy-core   (policy evaluator)
+jingu-core        ← jingu-agent         (LLM intelligence — private)
 ```
 
-**Dependency direction**: `trust-gate → policy-core → (nothing)`.
+**Dependency direction**: `policy-core → @jingu/protocol → (nothing)`.
+`trust-gate` depends on `@jingu/protocol` directly — not on `policy-core`.
 Policy-core has no knowledge of enforcement, execution, or runtime layers.
 
 ## Development
