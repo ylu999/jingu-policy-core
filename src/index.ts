@@ -87,3 +87,16 @@ export type {
 export * from "./rpp/rpp.types.js"
 export * from "./rpp/rpp.failures.js"
 export { validateRPP } from "./rpp/rpp.validate.js"
+
+export {
+  resolvePolicies,
+} from "./resolver/policy-resolver"
+export type {
+  TaskType,
+  RiskLevel,
+  ExecutionMode,
+  ReviewerMode,
+  TaskContext,
+  PolicyPack,
+  ExecutionConfig,
+} from "./resolver/policy-resolver"
