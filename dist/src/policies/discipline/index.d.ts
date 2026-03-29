@@ -1,9 +1,0 @@
-export { p1ConstraintObedience } from "./p1-constraint-obedience";
-export { p2Preconditions } from "./p2-preconditions";
-export { p3FailureClassification } from "./p3-failure-classification";
-export { p4GlobalInvariants } from "./p4-global-invariants";
-export { p5RespectAuthority } from "./p5-respect-authority";
-export { p6BoundedExecution } from "./p6-bounded-execution";
-export { p7Hygiene } from "./p7-hygiene";
-export { p8ClaimHonesty } from "./p8-claim-honesty";
-export { p9HypothesisSearch } from "./p9-hypothesis-search";
