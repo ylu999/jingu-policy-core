@@ -28,7 +28,28 @@ export type Proposal = {
   reasoning?: string
 }
 
+// ---------------------------------------------------------------------------
+// Evidence — typed facts (v1: backward-compatible, adds typed items alongside
+// the legacy string arrays)
+// ---------------------------------------------------------------------------
+
+export type EvidenceType =
+  | "observation"       // something directly seen/read
+  | "measurement"       // a numeric or threshold-bound reading
+  | "test_result"       // pass/fail outcome from a test run
+  | "command_output"    // stdout/stderr from a command
+  | "file_content"      // contents/diff of a file
+
+export type TypedEvidenceItem = {
+  id: string
+  type: EvidenceType
+  value: string           // human-readable summary
+  groundTruth?: string    // machine-checkable fact, e.g. exit code, regex match
+  source?: string         // where this came from (file path, URL, command)
+}
+
 export type Evidence = {
+  // Legacy fields — kept for backward-compat; prefer `items` for new code
   observations?: string[]
   failureSignals?: string[]
   commandResults?: string[]
@@ -37,11 +58,36 @@ export type Evidence = {
     sizeDelta?: number
     largeFilesAdded?: number
   }
+  // Typed evidence items (v1 addition)
+  items?: TypedEvidenceItem[]
+}
+
+// ---------------------------------------------------------------------------
+// Claim — typed assertions (v1: backward-compatible, adds structured claims
+// alongside the legacy string array)
+// ---------------------------------------------------------------------------
+
+export type ClaimType =
+  | "hypothesis"    // a proposed explanation for observed symptoms
+  | "diagnosis"     // a concluded root-cause identification
+  | "plan"          // a set of intended actions
+  | "tradeoff"      // an explicit options comparison
+  | "completion"    // a claim that a task or subtask is done
+
+export type TypedClaim = {
+  id: string
+  type: ClaimType
+  text: string
+  evidenceRefs: string[]   // IDs of TypedEvidenceItem that support this claim
+  confidence?: "low" | "medium" | "high"
 }
 
 export type Claim = {
+  // Legacy field — kept for backward-compat; prefer `typed` for new code
   statements: string[]
   confidence?: "low" | "medium" | "high"
+  // Typed claims (v1 addition)
+  typed?: TypedClaim[]
 }
 
 export type ReasoningFrame = {
@@ -100,4 +146,17 @@ export type Input = {
   executionBudget?: ExecutionBudget  // P19: scope load signals
 }
 
+// ---------------------------------------------------------------------------
+// Policy types
+// ---------------------------------------------------------------------------
+
+// Classic policy — runs on the full Input unconditionally
 export type Policy = (input: Input) => Violation[]
+
+// Typed policy — declares which ClaimTypes it applies to; evaluated only when
+// the input contains a typed claim of a matching type.
+// Policies that don't depend on typed claims should remain plain Policy.
+export type TypedPolicy = {
+  appliesTo: ClaimType[]
+  check: (claim: TypedClaim, evidence: Evidence | undefined, input: Input) => Violation[]
+}

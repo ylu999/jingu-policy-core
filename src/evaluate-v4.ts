@@ -1,6 +1,6 @@
 import { enforceReasoningFrame } from "./reasoning-gate"
 import { allPolicies, seniorPolicies } from "./policies"
-import type { Input, Violation } from "./types"
+import type { Input, Violation, TypedPolicy } from "./types"
 
 export type ReasoningGateResult =
   | { decision: "accept" }
@@ -29,7 +29,7 @@ export type V4ReasoningRejectResult = {
 
 export type V4StageResult = V4ReasoningRejectResult | V4RegimeResult
 
-function scoreFromViolations(violations: Violation[], policyCount: number): number {
+export function scoreFromViolations(violations: Violation[], policyCount: number): number {
   if (policyCount === 0) return 100
   const penalty = violations.reduce((acc, v) => {
     if (v.severity === "block") return acc + 3
@@ -48,7 +48,7 @@ export function gradeFromScore(score: number): Grade {
   return "F"
 }
 
-function decideFromViolations(violations: Violation[], reasoningViolations: Violation[]): "accept" | "reject" | "block" {
+export function decideFromViolations(violations: Violation[], reasoningViolations: Violation[]): "accept" | "reject" | "block" {
   const all = [...violations, ...reasoningViolations]
   if (all.some(v => v.severity === "block")) return "block"
   if (all.some(v => v.severity === "reject")) return "reject"
@@ -122,3 +122,82 @@ export function evaluateV4(input: Input): V4StageResult {
 
 // Alias for compatibility
 export const evaluateV4Sync = evaluateV4
+
+// ---------------------------------------------------------------------------
+// Typed policy dispatch
+//
+// Runs a set of TypedPolicy instances against the typed claims in the input.
+// Each TypedPolicy declares appliesTo: ClaimType[] — it is only invoked for
+// claims whose type appears in that list.
+//
+// This is the bridge from the legacy "run all policies on Input" model to the
+// formal "∀ claim: constraints(claim, evidence)" model.
+//
+// Usage:
+//   const violations = runTypedPolicies(input, myTypedPolicies)
+//
+// To extend evaluateV4 with typed policies, pass them in via evaluateV4WithTyped.
+// ---------------------------------------------------------------------------
+export function runTypedPolicies(input: Input, typedPolicies: TypedPolicy[]): Violation[] {
+  const claims = input.claim?.typed ?? []
+  if (claims.length === 0 || typedPolicies.length === 0) return []
+
+  const violations: Violation[] = []
+  for (const claim of claims) {
+    for (const policy of typedPolicies) {
+      if (policy.appliesTo.includes(claim.type)) {
+        violations.push(...policy.check(claim, input.evidence, input))
+      }
+    }
+  }
+  return violations
+}
+
+/**
+ * evaluateV4WithTyped
+ *
+ * Extends evaluateV4 with an optional set of TypedPolicy instances.
+ * TypedPolicies run after the regime evaluation; their violations are merged
+ * into the discipline violations array (they are not "senior" by default).
+ *
+ * Callers that don't pass typedPolicies get identical behavior to evaluateV4.
+ */
+export function evaluateV4WithTyped(input: Input, typedPolicies?: TypedPolicy[]): V4StageResult {
+  const base = evaluateV4(input)
+  if (base.stage === "reasoning") return base
+  if (!typedPolicies || typedPolicies.length === 0) return base
+
+  const typedViolations = runTypedPolicies(input, typedPolicies)
+  if (typedViolations.length === 0) return base
+
+  const violations = [...base.violations, ...typedViolations]
+  const score = scoreFromViolations(violations, allPolicies.length + typedPolicies.length)
+  const overallScore = Math.round(score * 0.6 + base.seniorityScore * 0.4)
+  const grade = gradeFromScore(overallScore)
+  const decision = decideFromViolations(violations, base.reasoningViolations)
+
+  const total = violations.length + base.reasoningViolations.length
+  let summary: string
+  if (decision === "block") {
+    const blocked = [...violations, ...base.reasoningViolations].filter(v => v.severity === "block")
+    summary = `BLOCKED — ${blocked.length} critical violation(s). Score: ${overallScore}/100 (${grade}).`
+  } else if (decision === "reject") {
+    summary = `REJECTED — ${total} violation(s). Score: ${overallScore}/100 (${grade}).`
+  } else if (total > 0) {
+    summary = `ACCEPTED with warnings — ${total} issue(s). Score: ${overallScore}/100 (${grade}).`
+  } else {
+    summary = `ACCEPTED — No violations. Score: ${overallScore}/100 (${grade}).`
+  }
+
+  return {
+    stage: "regime",
+    decision,
+    score,
+    seniorityScore: base.seniorityScore,
+    overallScore,
+    grade,
+    violations,
+    reasoningViolations: base.reasoningViolations,
+    summary,
+  }
+}

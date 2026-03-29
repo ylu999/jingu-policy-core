@@ -207,19 +207,54 @@ export const P7: Policy = (input: Input): Violation[] => {
 }
 
 // ─── P8: Claim Inflation ──────────────────────────────────────────────────────
-// Agent's claim exceeds what evidence supports
+// Agent's claim exceeds what evidence supports.
+//
+// Two tiers of checking:
+//   Tier 1 (typed): every TypedClaim must have at least one evidenceRef pointing
+//                   to a TypedEvidenceItem that actually exists. This is the
+//                   real constraint: ∀ claim → claim.evidenceRefs ⊆ evidence.items
+//   Tier 2 (legacy fallback): when no typed claims present, fall back to the
+//                   old count heuristic for backward-compat.
 export const P8: Policy = (input: Input): Violation[] => {
   const violations: Violation[] = []
   const claim = input.claim
-  if (!claim || claim.statements.length === 0) return violations
+  if (!claim) return violations
 
+  const typedClaims = claim.typed ?? []
+  const evidenceItems = input.evidence?.items ?? []
+
+  // Tier 1: typed claim → evidence ref binding check
+  if (typedClaims.length > 0) {
+    const evidenceIds = new Set(evidenceItems.map(e => e.id))
+    for (const tc of typedClaims) {
+      if (tc.evidenceRefs.length === 0) {
+        violations.push({
+          policyId: "P8",
+          severity: "reject",
+          message: `Claim "${tc.id}" (${tc.type}: "${tc.text.slice(0, 60)}") has no evidence references — every claim must cite supporting evidence`,
+        })
+      } else {
+        const dangling = tc.evidenceRefs.filter(ref => !evidenceIds.has(ref))
+        if (dangling.length > 0) {
+          violations.push({
+            policyId: "P8",
+            severity: "reject",
+            message: `Claim "${tc.id}" references evidence ID(s) that do not exist: ${dangling.join(", ")}`,
+          })
+        }
+      }
+    }
+    return violations
+  }
+
+  // Tier 2: legacy fallback — count heuristic
+  if (claim.statements.length === 0) return violations
   const evidence = input.evidence
   const evidenceCount =
     (evidence?.observations?.length ?? 0) +
     (evidence?.commandResults?.length ?? 0)
 
-  // More claims than evidence items = inflation
-  if (claim.statements.length > Math.max(evidenceCount, 1) && evidenceCount === 0) {
+  if (claim.statements.length > 0 && evidenceCount === 0) {
     violations.push({
       policyId: "P8",
       severity: "reject",

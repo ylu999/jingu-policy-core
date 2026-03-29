@@ -5,7 +5,12 @@ export type {
   Action,
   Proposal,
   Evidence,
+  EvidenceType,
+  TypedEvidenceItem,
   Claim,
+  ClaimType,
+  TypedClaim,
+  TypedPolicy,
   ReasoningFrame,
   TaskContract,
   DiscoveryType,
@@ -60,7 +65,15 @@ export type {
   CoherenceJudgeResult,
 } from "./coherence-check"
 
-export { evaluateV4, evaluateV4Sync, gradeFromScore } from "./evaluate-v4"
+export {
+  evaluateV4,
+  evaluateV4Sync,
+  evaluateV4WithTyped,
+  runTypedPolicies,
+  gradeFromScore,
+  scoreFromViolations,
+  decideFromViolations,
+} from "./evaluate-v4"
 export type { V4StageResult, V4RegimeResult, V4ReasoningRejectResult, Grade } from "./evaluate-v4"
 
 export { evaluateV5, evaluateV5WithJudgement } from "./evaluate-v5"
