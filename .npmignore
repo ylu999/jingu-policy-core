@@ -1,0 +1,8 @@
+tests/
+dist/tests/
+src/**/*.test.ts
+dist/src/**/*.test.js
+dist/src/**/*.test.d.ts
+context-spec/
+tsconfig.json
+*.tgz
