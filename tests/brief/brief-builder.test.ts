@@ -56,12 +56,13 @@ describe("buildBrief — happy path", () => {
     assert.ok(result.includes("## ACTIVE POLICIES"), "missing ACTIVE POLICIES header")
     assert.ok(result.includes("## REQUIRED GATES"), "missing REQUIRED GATES header")
     assert.ok(result.includes("## EXECUTION CONTEXT"), "missing EXECUTION CONTEXT header")
+    assert.ok(result.includes("## OUTPUT CONTRACT"), "missing OUTPUT CONTRACT header")
   })
 
   it("sections are separated by double newline", () => {
     const result = buildBrief(makeConfig())
     const sections = result.split("\n\n")
-    assert.equal(sections.length, 3, "expected exactly 3 sections separated by double newline")
+    assert.equal(sections.length, 4, "expected exactly 4 sections separated by double newline")
   })
 })
 
