@@ -101,7 +101,41 @@ invalid_state ∉ reachable_states
 - check:boundary runs before merge — direct loop-emitter import → CI fail
 - check:critical-tests runs before merge — deleted guardian test → CI fail
 
-**Long-term enforcement:** TypeScript branded types for NormalizedTrace vs RawTrace (prevents passing raw to comparison function)
+**Long-term enforcement:** TypeScript branded types for NormalizedTrace vs RawTrace (prevents passing raw to comparison function). See B006.
+
+### P4a — Single Entry Point (sub-principle of P4)
+
+> If a behavior has multiple entry points, it will be misused.
+> The correct state must be reachable through exactly one path; all other paths must be blocked.
+
+**Trace system instance:**
+```
+assertTraceEquivalence()  ← the ONE legal comparison path
+  │
+  ├── stripVolatileFields()    ← removes per-run noise (NORMALIZE_WHITELIST)
+  └── policyNormalize()        ← structural normalization (parent_index, NormalizedEvent)
+
+❌ calling either layer function directly for comparison = illegal
+```
+
+**Why rename alone is not enough:**
+Renaming `normalizeTrace → stripVolatileFields` makes the two functions distinguishable but does not prevent a developer from calling `deepEqual(stripVolatileFields(a), stripVolatileFields(b))` — which skips structural normalization and produces a false equivalence check. The entry point must be enforced structurally (type system) and statically (lint).
+
+### P4b — API Defines Correctness (sub-principle of P4)
+
+> The correct way to use a system is defined by its API surface, not by documentation.
+> If the correct path is not the only path, the API is incomplete.
+
+**Implication for design:**
+When designing any function that can be misused:
+1. Ask: "Is there a simpler path that looks equivalent but is semantically wrong?"
+2. If yes: remove that path, or make the correct path the only one that compiles
+3. Documentation explaining the correct path is a sign the API is incomplete
+
+**Trace system instance:**
+- Correct: `assertTraceEquivalence(a, b)`
+- Looks equivalent but wrong: `assert.deepEqual(normalizeTrace(a), normalizeTrace(b))` — skips volatile field stripping
+- Fix: type system (B006) prevents passing RawTrace to policyNormalize; lint (B007) prevents the pattern in test code
 
 ---
 
