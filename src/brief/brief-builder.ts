@@ -45,7 +45,7 @@ export function buildBrief(config: ExecutionConfig): string {
     `Respond with a single JSON object matching the RPP schema v1.`,
     `Do not include any prose outside the JSON object.`,
     `Required top-level fields: schema_version ("rpp.v1"), call_id, steps, response.`,
-    `steps must contain EXACTLY 4 objects: {"id":"s1","stage":"interpretation"}, {"id":"s2","stage":"reasoning"}, {"id":"s3","stage":"decision"}, {"id":"s4","stage":"action"} — in that order. Each id (s1, s2, s3, s4) must appear EXACTLY ONCE. Never repeat an id.`,
+    `steps must contain exactly 4 objects with ids "s1", "s2", "s3", "s4" and stages "interpretation", "reasoning", "decision", "action" — in that order.`,
     `Each step must have: id (string), stage (one of the four above), content (array of strings), references (array of reference objects).`,
     `All references must be valid: non-empty supports field; rule_id matches RUL-NNN; method_id matches XXX-NNN.`,
     `response.references must contain at least one entry with type "derived" and from_steps listing step ids from your steps array.`,
