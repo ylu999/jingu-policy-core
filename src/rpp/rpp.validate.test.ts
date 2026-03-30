@@ -149,34 +149,33 @@ describe("validateRPP — NO_REFERENCES", () => {
 })
 
 describe("validateRPP — SUPPORTS_TOO_VAGUE", () => {
-  it("reference with empty supports string → SUPPORTS_TOO_VAGUE warning", () => {
+  it("empty supports string → SUPPORTS_TOO_VAGUE warning", () => {
     const record = makeValidRecord()
     const interpretStep = record.steps.find((s) => s.stage === "interpretation")!
     interpretStep.references[0].supports = ""
     const result = validateRPP(record)
     const warning = result.warnings.find((w) => w.code === "SUPPORTS_TOO_VAGUE" && w.stage === "interpretation")
-    assert.ok(warning, "expected SUPPORTS_TOO_VAGUE warning for interpretation")
-    // Only warnings, no hard failures — overall_status should be weakly_supported
+    assert.ok(warning, "expected SUPPORTS_TOO_VAGUE warning for empty supports")
     assert.equal(result.overall_status, "weakly_supported")
   })
 
-  it("reference with whitespace-only supports → SUPPORTS_TOO_VAGUE warning", () => {
+  it("supports shorter than 8 chars → SUPPORTS_TOO_VAGUE warning", () => {
     const record = makeValidRecord()
     const interpretStep = record.steps.find((s) => s.stage === "interpretation")!
-    interpretStep.references[0].supports = "   "
+    interpretStep.references[0].supports = "short" // 5 chars
     const result = validateRPP(record)
     const warning = result.warnings.find((w) => w.code === "SUPPORTS_TOO_VAGUE" && w.stage === "interpretation")
-    assert.ok(warning, "expected SUPPORTS_TOO_VAGUE warning for whitespace-only supports")
+    assert.ok(warning, "expected SUPPORTS_TOO_VAGUE warning for supports shorter than 8 chars")
     assert.equal(result.overall_status, "weakly_supported")
   })
 
-  it("reference with non-empty supports → no SUPPORTS_TOO_VAGUE", () => {
+  it("supports exactly 8 chars → no SUPPORTS_TOO_VAGUE", () => {
     const record = makeValidRecord()
     const interpretStep = record.steps.find((s) => s.stage === "interpretation")!
-    interpretStep.references[0].supports = "grounding this claim"
+    interpretStep.references[0].supports = "12345678" // exactly 8 chars
     const result = validateRPP(record)
     const warning = result.warnings.find((w) => w.code === "SUPPORTS_TOO_VAGUE")
-    assert.equal(warning, undefined, "should not have SUPPORTS_TOO_VAGUE for non-empty supports")
+    assert.equal(warning, undefined, "should not have SUPPORTS_TOO_VAGUE for supports >= 8 chars")
   })
 })
 
