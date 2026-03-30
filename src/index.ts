@@ -100,3 +100,6 @@ export type {
   PolicyPack,
   ExecutionConfig,
 } from "./resolver/policy-resolver"
+
+export { buildBrief } from "./brief/brief-builder"
+export type { BriefString } from "./brief/brief-builder"
