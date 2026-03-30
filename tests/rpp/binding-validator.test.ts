@@ -56,8 +56,8 @@ function makeValidRecord(): RPPRecord {
 describe("validateRPPBinding — valid record", () => {
   it("valid record returns binding_valid=true, no errors", () => {
     const result = validateRPPBinding(makeValidRecord())
-    assert.equal(result.binding_valid, true)
-    assert.equal(result.schema_valid, true)
+    assert.equal(result.structure_valid, true)
+    assert.equal(result.syntax_valid, true)
     assert.equal(result.errors.length, 0)
   })
 
@@ -65,15 +65,15 @@ describe("validateRPPBinding — valid record", () => {
     const record = makeValidRecord()
     delete record.schema_version
     const result = validateRPPBinding(record)
-    assert.equal(result.schema_valid, true)
-    assert.equal(result.binding_valid, true)
+    assert.equal(result.syntax_valid, true)
+    assert.equal(result.structure_valid, true)
   })
 
   it("valid: schema_version rpp.v1 passes", () => {
     const record = makeValidRecord()
     record.schema_version = "rpp.v1"
     const result = validateRPPBinding(record)
-    assert.equal(result.schema_valid, true)
+    assert.equal(result.syntax_valid, true)
   })
 })
 
@@ -86,7 +86,7 @@ describe("validateRPPBinding — MISSING_REQUIRED_STAGE", () => {
     const record = makeValidRecord()
     record.steps = record.steps.filter((s) => s.stage !== "interpretation")
     const result = validateRPPBinding(record)
-    assert.equal(result.binding_valid, false)
+    assert.equal(result.structure_valid, false)
     assert.ok(result.errors.some((e) => e.code === "MISSING_REQUIRED_STAGE" && e.message.includes("interpretation")))
   })
 
@@ -252,7 +252,7 @@ describe("validateRPPBinding — response provenance", () => {
 describe("checkRPPStrictness — valid record", () => {
   it("valid record returns strictness_valid=true, no errors", () => {
     const result = checkRPPStrictness(makeValidRecord())
-    assert.equal(result.strictness_valid, true)
+    assert.equal(result.strictness_pass, true)
     assert.equal(result.errors.length, 0)
   })
 })
@@ -350,9 +350,9 @@ describe("checkRPPStrictness — SUPPORTS_MINIMAL", () => {
 describe("validateRPPFull — combined Layer A + B", () => {
   it("valid record → all three phases valid", () => {
     const result = validateRPPFull(makeValidRecord())
-    assert.equal(result.schema_valid, true)
-    assert.equal(result.binding_valid, true)
-    assert.equal(result.strictness_valid, true)
+    assert.equal(result.syntax_valid, true)
+    assert.equal(result.structure_valid, true)
+    assert.equal(result.strictness_pass, true)
     assert.equal(result.valid, true)
     assert.equal(result.errors.length, 0)
   })
@@ -361,7 +361,7 @@ describe("validateRPPFull — combined Layer A + B", () => {
     const record = makeValidRecord()
     record.steps = record.steps.filter((s) => s.stage !== "reasoning")
     const result = validateRPPFull(record)
-    assert.equal(result.binding_valid, false)
+    assert.equal(result.structure_valid, false)
     assert.equal(result.valid, false)
   })
 
@@ -369,8 +369,8 @@ describe("validateRPPFull — combined Layer A + B", () => {
     const record = makeValidRecord()
     record.steps[2]!.references = [{ type: "evidence", source: "file", locator: "src/x.ts:1", supports: "evidence only decision" }]
     const result = validateRPPFull(record)
-    assert.equal(result.binding_valid, true)
-    assert.equal(result.strictness_valid, false)
+    assert.equal(result.structure_valid, true)
+    assert.equal(result.strictness_pass, false)
     assert.equal(result.valid, false)
   })
 
@@ -387,6 +387,6 @@ describe("validateRPPFull — combined Layer A + B", () => {
 
   it("valid: strictness_valid field is present and boolean", () => {
     const result = validateRPPFull(makeValidRecord())
-    assert.equal(typeof result.strictness_valid, "boolean")
+    assert.equal(typeof result.strictness_pass, "boolean")
   })
 })

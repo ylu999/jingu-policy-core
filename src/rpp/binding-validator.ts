@@ -47,15 +47,25 @@ export interface ValidationIssue {
   message: string
 }
 
-/** Three-phase result — enables per-phase event log emission in Unit 2.3. */
+/** Three-phase result — enables per-phase event log emission in Unit 2.3.
+ *
+ * Layer mapping:
+ *   syntax_valid    — schema_version + JSON schema structural correctness
+ *   structure_valid — Layer A: provenance chain connectivity, id uniqueness, ref existence
+ *   strictness_pass — Layer B: support-type policy (UNJUSTIFIED_DECISION, ACTION_NO_EVIDENCE)
+ *
+ * Runtime admission rule (Unit 2.2):
+ *   if !syntax_valid || !structure_valid → invalid_output (loop terminates or retries)
+ *   if !strictness_pass → continue (reviewer still sees it; strictness is advisory for loop)
+ */
 export interface BindingValidationResult {
-  /** schema_valid: schema_version present and matches "rpp.v1" (or absent = backward compat) */
-  schema_valid: boolean
-  /** binding_valid: all Layer A structural binding checks pass */
-  binding_valid: boolean
-  /** strictness_valid: all Layer B hard strictness checks pass (warnings do not affect this) */
-  strictness_valid: boolean
-  /** overall: schema_valid && binding_valid && strictness_valid */
+  /** syntax_valid: schema_version matches "rpp.v1" or is absent (backward compat) */
+  syntax_valid: boolean
+  /** structure_valid: all Layer A structural binding checks pass */
+  structure_valid: boolean
+  /** strictness_pass: all Layer B hard strictness checks pass (warnings do not affect this) */
+  strictness_pass: boolean
+  /** overall: syntax_valid && structure_valid && strictness_pass */
   valid: boolean
   errors: ValidationIssue[]
   warnings: ValidationIssue[]
@@ -211,12 +221,12 @@ export function validateRPPBinding(record: RPPRecord): BindingValidationResult {
     }
   }
 
-  const binding_valid = errors.length === 0
+  const structure_valid = errors.length === 0
   return {
-    schema_valid,
-    binding_valid,
-    strictness_valid: true,   // Layer B not run — assume pass
-    valid: schema_valid && binding_valid,
+    syntax_valid: schema_valid,
+    structure_valid,
+    strictness_pass: true,   // Layer B not run — assume pass
+    valid: schema_valid && structure_valid,
     errors,
     warnings,
   }
@@ -297,12 +307,12 @@ export function checkRPPStrictness(record: RPPRecord): BindingValidationResult {
     }
   }
 
-  const strictness_valid = errors.length === 0
+  const strictness_pass = errors.length === 0
   return {
-    schema_valid: true,       // Layer A not run — assume pass
-    binding_valid: true,      // Layer A not run — assume pass
-    strictness_valid,
-    valid: strictness_valid,
+    syntax_valid: true,       // Layer A not run — assume pass
+    structure_valid: true,    // Layer A not run — assume pass
+    strictness_pass,
+    valid: strictness_pass,
     errors,
     warnings,
   }
@@ -317,10 +327,10 @@ export function validateRPPFull(record: RPPRecord): BindingValidationResult {
   const layerA = validateRPPBinding(record)
   const layerB = checkRPPStrictness(record)
   return {
-    schema_valid: layerA.schema_valid,
-    binding_valid: layerA.binding_valid,
-    strictness_valid: layerB.strictness_valid,
-    valid: layerA.schema_valid && layerA.binding_valid && layerB.strictness_valid,
+    syntax_valid: layerA.syntax_valid,
+    structure_valid: layerA.structure_valid,
+    strictness_pass: layerB.strictness_pass,
+    valid: layerA.syntax_valid && layerA.structure_valid && layerB.strictness_pass,
     errors: [...layerA.errors, ...layerB.errors],
     warnings: [...layerA.warnings, ...layerB.warnings],
   }

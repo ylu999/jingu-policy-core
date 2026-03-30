@@ -109,5 +109,5 @@ export type { BriefString } from "./brief/brief-builder"
 export { runGates, resolveGates, GATE_REGISTRY, evidenceRequiredGate, verifyGate, noOpDetectionGate, scopeGate, testPassGate, multiOptionGate, designCompletenessGate } from "./gates/gate-engine"
 export type { GateVerdict, GateResult, GateContext, Gate, ExecutorVerdict, GateExecutorResult } from "./gates/gate-engine"
 
-export { lintLoopDesign, isDesignValid, checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement } from "./linter/index.js"
-export type { LoopDesignSpec, DesignIssue, ErrorTypeSpec, RetryPolicy, LoopStage, ErrorLayer, IssueSeverity } from "./linter/index.js"
+export { lintLoopDesign, isDesignValid, checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement } from "./design-audit/index.js"
+export type { LoopDesignSpec, DesignIssue, ErrorTypeSpec, RetryPolicy, LoopStage, ErrorLayer, IssueSeverity } from "./design-audit/index.js"

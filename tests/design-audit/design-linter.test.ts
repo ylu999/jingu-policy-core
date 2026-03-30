@@ -10,8 +10,8 @@ import {
   checkLayerSeparation,
   checkRecoverability,
   checkContractEnforcement,
-} from "../../src/linter/index.js"
-import type { LoopDesignSpec } from "../../src/linter/index.js"
+} from "../../src/design-audit/index.js"
+import type { LoopDesignSpec } from "../../src/design-audit/index.js"
 
 // ---------------------------------------------------------------------------
 // Fixtures

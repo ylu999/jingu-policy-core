@@ -39,9 +39,20 @@ export function buildBrief(config: ExecutionConfig): string {
   ]
   const contextSection = `## EXECUTION CONTEXT\n${contextLines.join("\n")}`
 
+  // Section 4: OUTPUT CONTRACT (BL-004 partial, BL-014 enforcement)
+  // Requires proposer to output RPP JSON v1. schema_version is required at runtime.
+  const contractLines = [
+    `Respond with a single JSON object matching the RPP schema v1.`,
+    `Do not include any prose outside the JSON object.`,
+    `Required fields: schema_version ("rpp.v1"), call_id, steps (all 4 stages), response.`,
+    `All references must be valid: non-empty locator/supports, rule_id matches RUL-NNN, method_id matches XXX-NNN.`,
+    `If uncertain, produce a best-effort valid RPP JSON — do not omit required fields or stages.`,
+  ]
+  const contractSection = `## OUTPUT CONTRACT\n${contractLines.map((l) => `- ${l}`).join("\n")}`
+
   // renderSection produces no trailing newline, so "\n\n" yields exactly one
   // blank line between sections. Do not add trailing newlines to renderSection.
-  return [policiesSection, gatesSection, contextSection].join("\n\n")
+  return [policiesSection, gatesSection, contextSection, contractSection].join("\n\n")
 }
 
 function renderSection(title: string, items: string[]): string {
