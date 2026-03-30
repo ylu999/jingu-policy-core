@@ -87,6 +87,8 @@ export type {
 export * from "./rpp/rpp.types.js"
 export * from "./rpp/rpp.failures.js"
 export { validateRPP } from "./rpp/rpp.validate.js"
+export { validateRPPBinding, checkRPPStrictness, validateRPPFull } from "./rpp/binding-validator.js"
+export type { BindingReasonCode, ValidationIssue, BindingValidationResult } from "./rpp/binding-validator.js"
 
 export {
   resolvePolicies,
