@@ -10,6 +10,7 @@ import {
   checkLayerSeparation,
   checkRecoverability,
   checkContractEnforcement,
+  checkWarningJustifications,
 } from "../../src/design-audit/index.js"
 import type { LoopDesignSpec } from "../../src/design-audit/index.js"
 
@@ -296,8 +297,10 @@ describe("lintLoopDesign — catches the Unit 2.2 pre-review design problems", (
 describe("severity enforcement contract", () => {
   it("isDesignValid returns true when only warnings exist (no errors)", () => {
     const spec = makeValidSpec()
-    // Trigger UNBOUNDED_RETRY_RISK (warning) but no errors
+    // Trigger UNBOUNDED_RETRY_RISK (warning) — and provide justification so
+    // WARNING_WITHOUT_JUSTIFICATION does not also fire
     spec.retryPolicy.maxAttempts = 4
+    spec.justifications = { UNBOUNDED_RETRY_RISK: "accepted for load-test scenario" }
     const issues = lintLoopDesign(spec)
     assert.ok(issues.some(i => i.severity === "warning"), "should have at least one warning")
     assert.ok(!issues.some(i => i.severity === "error"),  "should have no errors")
@@ -333,5 +336,73 @@ describe("severity enforcement contract", () => {
       message: "just an observation",
     }
     assert.equal(infoIssue.severity, "info")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Rule 5 — Warning Justification
+// ---------------------------------------------------------------------------
+
+describe("Rule 5 — checkWarningJustifications", () => {
+  it("warning with no justification → WARNING_WITHOUT_JUSTIFICATION", () => {
+    const priorIssues = [
+      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", severity: "warning" as const, message: "..." },
+    ]
+    const spec = makeValidSpec()  // no justifications field
+    const issues = checkWarningJustifications(spec, priorIssues)
+    assert.ok(issues.some(i => i.code === "WARNING_WITHOUT_JUSTIFICATION" && i.severity === "warning"))
+  })
+
+  it("warning with empty string justification → WARNING_WITHOUT_JUSTIFICATION", () => {
+    const priorIssues = [
+      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", severity: "warning" as const, message: "..." },
+    ]
+    const spec = makeValidSpec()
+    spec.justifications = { UNBOUNDED_RETRY_RISK: "   " }  // whitespace only
+    const issues = checkWarningJustifications(spec, priorIssues)
+    assert.ok(issues.some(i => i.code === "WARNING_WITHOUT_JUSTIFICATION"))
+  })
+
+  it("warning with written justification → no WARNING_WITHOUT_JUSTIFICATION", () => {
+    const priorIssues = [
+      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", severity: "warning" as const, message: "..." },
+    ]
+    const spec = makeValidSpec()
+    spec.justifications = { UNBOUNDED_RETRY_RISK: "Accepted: load-test scenario requires 5 attempts." }
+    const issues = checkWarningJustifications(spec, priorIssues)
+    assert.ok(!issues.some(i => i.code === "WARNING_WITHOUT_JUSTIFICATION"))
+  })
+
+  it("no warnings in prior issues → no output", () => {
+    const priorIssues = [
+      { rule: "r1", code: "INVALID_RETRY_POLICY", severity: "error" as const, message: "..." },
+    ]
+    const spec = makeValidSpec()
+    const issues = checkWarningJustifications(spec, priorIssues)
+    assert.deepEqual(issues, [])
+  })
+
+  it("lintLoopDesign: warning without justification propagates through full pipeline", () => {
+    const spec = makeValidSpec()
+    spec.retryPolicy.maxAttempts = 4  // triggers UNBOUNDED_RETRY_RISK (warning)
+    // no justifications provided
+    const issues = lintLoopDesign(spec)
+    assert.ok(issues.some(i => i.code === "UNBOUNDED_RETRY_RISK"),              "UNBOUNDED_RETRY_RISK should fire")
+    assert.ok(issues.some(i => i.code === "WARNING_WITHOUT_JUSTIFICATION"),     "WARNING_WITHOUT_JUSTIFICATION should fire")
+    assert.equal(isDesignValid(spec), true, "no errors, just warnings — isDesignValid must remain true")
+  })
+
+  it("lintLoopDesign: justified warning suppresses WARNING_WITHOUT_JUSTIFICATION", () => {
+    const spec = makeValidSpec()
+    spec.retryPolicy.maxAttempts = 4
+    spec.justifications = { UNBOUNDED_RETRY_RISK: "Intentional: stress-test harness needs 4 retries." }
+    const issues = lintLoopDesign(spec)
+    assert.ok(issues.some(i => i.code === "UNBOUNDED_RETRY_RISK"),              "UNBOUNDED_RETRY_RISK still fires")
+    assert.ok(!issues.some(i => i.code === "WARNING_WITHOUT_JUSTIFICATION"),    "WARNING_WITHOUT_JUSTIFICATION must not fire")
+  })
+
+  it("valid spec with no warnings produces no justification issues", () => {
+    const issues = checkWarningJustifications(makeValidSpec(), [])
+    assert.deepEqual(issues, [])
   })
 })

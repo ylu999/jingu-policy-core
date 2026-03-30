@@ -12,20 +12,21 @@
 export type { LoopDesignSpec, DesignIssue, ErrorTypeSpec, RetryPolicy, LoopStage, ErrorLayer, LoopVerdict, IssueSeverity } from "./types.js"
 
 import type { LoopDesignSpec, DesignIssue } from "./types.js"
-import { checkStateMachineCompleteness } from "./rules.js"
-import { checkLayerSeparation } from "./rules.js"
-import { checkRecoverability } from "./rules.js"
-import { checkContractEnforcement } from "./rules.js"
+import { checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement, checkWarningJustifications } from "./rules.js"
 
-export { checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement }
+export { checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement, checkWarningJustifications }
 
 export function lintLoopDesign(spec: LoopDesignSpec): DesignIssue[] {
   if (spec == null) throw new Error("lintLoopDesign: spec is required")
-  return [
+  const priorIssues = [
     ...checkStateMachineCompleteness(spec),
     ...checkLayerSeparation(spec),
     ...checkRecoverability(spec),
     ...checkContractEnforcement(spec),
+  ]
+  return [
+    ...priorIssues,
+    ...checkWarningJustifications(spec, priorIssues),
   ]
 }
 

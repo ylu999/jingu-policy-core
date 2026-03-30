@@ -56,6 +56,17 @@ export interface LoopDesignSpec {
   verdicts: LoopVerdict[]
   retryPolicy: RetryPolicy
   errorTypes: ErrorTypeSpec[]
+  /**
+   * Explicit justifications for accepted warning-severity issues.
+   * Keys are DesignIssue.code values; values are the written rationale.
+   *
+   * Required by the WARNING_WITHOUT_JUSTIFICATION rule:
+   * every warning-severity issue emitted by lintLoopDesign must have a
+   * corresponding entry here, or a second-order warning is emitted.
+   *
+   * This turns "warning = allowed" into "warning = traceable decision".
+   */
+  justifications?: Record<string, string>
 }
 
 export type IssueSeverity = "error" | "warning" | "info"

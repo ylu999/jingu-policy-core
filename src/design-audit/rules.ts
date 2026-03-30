@@ -169,6 +169,46 @@ export function checkRecoverability(spec: LoopDesignSpec): DesignIssue[] {
 //     contract violations have nowhere to go
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Rule 5 — Warning Justification
+//
+// Contract: every warning-severity issue must have an explicit written
+// justification in spec.justifications[issue.code].
+//
+// This rule runs AFTER the other 4 — it receives the already-computed
+// warnings and checks whether the designer acknowledged each one.
+//
+// A missing justification does NOT become an error (that would be circular:
+// you'd need to justify why you're not justifying). It stays a warning,
+// but with a distinct code so the consumer knows the deviation is
+// unacknowledged rather than intentionally accepted.
+// ---------------------------------------------------------------------------
+
+export function checkWarningJustifications(
+  spec: LoopDesignSpec,
+  priorIssues: DesignIssue[]
+): DesignIssue[] {
+  const issues: DesignIssue[] = []
+
+  const warningCodes = priorIssues
+    .filter(i => i.severity === "warning")
+    .map(i => i.code)
+
+  for (const code of warningCodes) {
+    const justification = spec.justifications?.[code]
+    if (!justification || justification.trim() === "") {
+      issues.push({
+        rule: "warning_justification",
+        code: "WARNING_WITHOUT_JUSTIFICATION",
+        severity: "warning",
+        message: `Warning "${code}" has no justification in spec.justifications. Silently accepting a warning is not allowed — record why this deviation is acceptable in this context.`,
+      })
+    }
+  }
+
+  return issues
+}
+
 export function checkContractEnforcement(spec: LoopDesignSpec): DesignIssue[] {
   const issues: DesignIssue[] = []
 
