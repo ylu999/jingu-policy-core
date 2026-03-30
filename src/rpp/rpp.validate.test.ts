@@ -7,6 +7,7 @@ import { RPPRecord, CognitiveStep, ResponseStep } from "./rpp.types.js"
 
 function makeValidRecord(): RPPRecord {
   const interpretation: CognitiveStep = {
+    id: "s-interpretation",
     stage: "interpretation",
     content: ["some claim about the system"],
     references: [
@@ -19,6 +20,7 @@ function makeValidRecord(): RPPRecord {
     ],
   }
   const reasoning: CognitiveStep = {
+    id: "s-reasoning",
     stage: "reasoning",
     content: ["some claim about the system"],
     references: [
@@ -31,6 +33,7 @@ function makeValidRecord(): RPPRecord {
     ],
   }
   const decision: CognitiveStep = {
+    id: "s-decision",
     stage: "decision",
     content: ["some claim about the system"],
     references: [
@@ -42,6 +45,7 @@ function makeValidRecord(): RPPRecord {
     ],
   }
   const action: CognitiveStep = {
+    id: "s-action",
     stage: "action",
     content: ["some claim about the system"],
     references: [
@@ -57,10 +61,9 @@ function makeValidRecord(): RPPRecord {
     content: ["some claim about the system"],
     references: [
       {
-        type: "evidence",
-        source: "file",
-        locator: "src/foo.ts:1",
-        supports: "derived from prior steps",
+        type: "derived",
+        from_steps: ["s-decision", "s-action"],
+        supports: "derived from decision and action steps above",
       },
     ],
   }
@@ -146,10 +149,10 @@ describe("validateRPP — NO_REFERENCES", () => {
 })
 
 describe("validateRPP — SUPPORTS_TOO_VAGUE", () => {
-  it("reference with supports shorter than 10 chars → SUPPORTS_TOO_VAGUE warning", () => {
+  it("reference with empty supports string → SUPPORTS_TOO_VAGUE warning", () => {
     const record = makeValidRecord()
     const interpretStep = record.steps.find((s) => s.stage === "interpretation")!
-    interpretStep.references[0].supports = "short"
+    interpretStep.references[0].supports = ""
     const result = validateRPP(record)
     const warning = result.warnings.find((w) => w.code === "SUPPORTS_TOO_VAGUE" && w.stage === "interpretation")
     assert.ok(warning, "expected SUPPORTS_TOO_VAGUE warning for interpretation")
@@ -157,13 +160,23 @@ describe("validateRPP — SUPPORTS_TOO_VAGUE", () => {
     assert.equal(result.overall_status, "weakly_supported")
   })
 
-  it("reference with supports exactly 10 chars → no SUPPORTS_TOO_VAGUE", () => {
+  it("reference with whitespace-only supports → SUPPORTS_TOO_VAGUE warning", () => {
     const record = makeValidRecord()
     const interpretStep = record.steps.find((s) => s.stage === "interpretation")!
-    interpretStep.references[0].supports = "1234567890" // exactly 10 chars
+    interpretStep.references[0].supports = "   "
+    const result = validateRPP(record)
+    const warning = result.warnings.find((w) => w.code === "SUPPORTS_TOO_VAGUE" && w.stage === "interpretation")
+    assert.ok(warning, "expected SUPPORTS_TOO_VAGUE warning for whitespace-only supports")
+    assert.equal(result.overall_status, "weakly_supported")
+  })
+
+  it("reference with non-empty supports → no SUPPORTS_TOO_VAGUE", () => {
+    const record = makeValidRecord()
+    const interpretStep = record.steps.find((s) => s.stage === "interpretation")!
+    interpretStep.references[0].supports = "grounding this claim"
     const result = validateRPP(record)
     const warning = result.warnings.find((w) => w.code === "SUPPORTS_TOO_VAGUE")
-    assert.equal(warning, undefined, "should not have SUPPORTS_TOO_VAGUE for 10-char supports")
+    assert.equal(warning, undefined, "should not have SUPPORTS_TOO_VAGUE for non-empty supports")
   })
 })
 
@@ -263,21 +276,24 @@ describe("validateRPP — INFERENCE_AS_FACT", () => {
 })
 
 describe("validateRPP — UNTRACEABLE_RESPONSE", () => {
-  it("response content not traceable to any prior step → UNTRACEABLE_RESPONSE failure", () => {
+  it("response with no derived ref → UNTRACEABLE_RESPONSE failure", () => {
     const record = makeValidRecord()
-    record.response.content = ["completely unrelated xyz banana purple"]
+    // Replace derived ref with an evidence ref — no structural link to prior steps
+    record.response.references = [
+      { type: "evidence", source: "file", locator: "src/foo.ts:1", supports: "grounding this claim" },
+    ]
     const result = validateRPP(record)
     const failure = result.failures.find((f) => f.code === "UNTRACEABLE_RESPONSE")
     assert.ok(failure, "expected UNTRACEABLE_RESPONSE for untraceable response content")
     assert.equal(result.overall_status, "invalid")
   })
 
-  it("response content traceable to prior step → no UNTRACEABLE_RESPONSE", () => {
+  it("response with derived ref → no UNTRACEABLE_RESPONSE", () => {
     const record = makeValidRecord()
-    // Response content shares key phrase with step content ("some")
+    // makeValidRecord already uses a derived ref in response — verify no UNTRACEABLE_RESPONSE
     const result = validateRPP(record)
     const failure = result.failures.find((f) => f.code === "UNTRACEABLE_RESPONSE")
-    assert.equal(failure, undefined, "should not have UNTRACEABLE_RESPONSE when response traces to prior step")
+    assert.equal(failure, undefined, "should not have UNTRACEABLE_RESPONSE when response has derived ref")
   })
 })
 
@@ -287,7 +303,7 @@ describe("validateRPP — overall_status", () => {
     // Trigger only SUPPORTS_TOO_VAGUE (a warning/soft failure) on all steps
     for (const step of record.steps) {
       for (const ref of step.references) {
-        ref.supports = "tiny"
+        ref.supports = ""
       }
     }
     const result = validateRPP(record)
@@ -303,7 +319,7 @@ describe("validateRPP — overall_status", () => {
     interpretStep.content = []
     // Trigger SUPPORTS_TOO_VAGUE (soft) on reasoning
     const reasoningStep = record.steps.find((s) => s.stage === "reasoning")!
-    reasoningStep.references[0].supports = "tiny"
+    reasoningStep.references[0].supports = ""
     const result = validateRPP(record)
     assert.ok(result.failures.length > 0, "should have at least one hard failure")
     assert.ok(result.warnings.length > 0, "should have at least one warning")
