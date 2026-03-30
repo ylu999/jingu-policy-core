@@ -108,6 +108,7 @@ const POLICY_FILES = new Set(
       rel.startsWith("design-audit/") ||
       rel.startsWith("loop-events/") ||
       rel.startsWith("invariants/") ||
+      rel.startsWith("principles/") ||
       rel === "evaluate-v4.ts" ||
       rel === "evaluate-v5.ts" ||
       rel === "coherence-check.ts" ||

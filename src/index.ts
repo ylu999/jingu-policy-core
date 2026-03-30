@@ -114,3 +114,4 @@ export type { LoopDesignSpec, DesignIssue, ErrorTypeSpec, RetryPolicy, LoopStage
 
 export * from "./loop-events/index.js"
 export * from "./invariants/index.js"
+export * from "./principles/index.js"
