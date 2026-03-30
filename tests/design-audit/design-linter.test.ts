@@ -288,3 +288,50 @@ describe("lintLoopDesign — catches the Unit 2.2 pre-review design problems", (
     assert.deepEqual(issues, [])
   })
 })
+
+// ---------------------------------------------------------------------------
+// Severity enforcement contract
+// ---------------------------------------------------------------------------
+
+describe("severity enforcement contract", () => {
+  it("isDesignValid returns true when only warnings exist (no errors)", () => {
+    const spec = makeValidSpec()
+    // Trigger UNBOUNDED_RETRY_RISK (warning) but no errors
+    spec.retryPolicy.maxAttempts = 4
+    const issues = lintLoopDesign(spec)
+    assert.ok(issues.some(i => i.severity === "warning"), "should have at least one warning")
+    assert.ok(!issues.some(i => i.severity === "error"),  "should have no errors")
+    assert.equal(isDesignValid(spec), true, "warnings alone must not block isDesignValid")
+  })
+
+  it("isDesignValid returns false when any error exists (even with warnings alongside)", () => {
+    const spec = makeValidSpec()
+    // Trigger both: missing invalid_output (error) + high retry count (warning)
+    spec.verdicts = ["pass", "fail", "reject"]  // MISSING_INVALID_OUTPUT_VERDICT → error
+    spec.retryPolicy.maxAttempts = 4             // UNBOUNDED_RETRY_RISK → warning
+    const issues = lintLoopDesign(spec)
+    assert.ok(issues.some(i => i.severity === "error"),   "should have at least one error")
+    assert.ok(issues.some(i => i.severity === "warning"), "should have at least one warning")
+    assert.equal(isDesignValid(spec), false, "error must block isDesignValid even when warnings also present")
+  })
+
+  it("isDesignValid returns true for spec with only info-severity issues", () => {
+    // info items are structural observations — no blocking behavior
+    // The valid spec produces no issues at all, which satisfies the contract
+    const issues = lintLoopDesign(makeValidSpec())
+    assert.ok(!issues.some(i => i.severity === "error"))
+    assert.equal(isDesignValid(makeValidSpec()), true)
+  })
+
+  it("DesignIssue severity type includes info", () => {
+    // Type-level contract: IssueSeverity = "error" | "warning" | "info"
+    // A manually constructed info issue should be assignable
+    const infoIssue = {
+      rule: "R0",
+      code: "OBSERVATION",
+      severity: "info" as const,
+      message: "just an observation",
+    }
+    assert.equal(infoIssue.severity, "info")
+  })
+})

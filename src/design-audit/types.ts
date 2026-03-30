@@ -1,5 +1,5 @@
-// src/linter/types.ts
-// Jingu Design Linter — type definitions
+// src/design-audit/types.ts
+// Jingu Design Audit — type definitions
 //
 // LoopDesignSpec is the intermediate representation (IR) for a governed loop
 // design. It captures enough structure to verify the 4 system invariants:
@@ -9,7 +9,24 @@
 //   3. Recoverability — retry only fires on recoverable errors
 //   4. Contract Enforcement — LLM contract violations map to invalid_output
 //
-// The linter consumes LoopDesignSpec and emits DesignIssue[].
+// The audit consumes LoopDesignSpec and emits DesignIssue[].
+//
+// ---------------------------------------------------------------------------
+// Severity model (enforcement contract)
+// ---------------------------------------------------------------------------
+//
+//   error   — Violates a system invariant. Blocks implementation.
+//             isDesignValid() returns false. Must be fixed before any code is written.
+//
+//   warning — Violates a recommended pattern (heuristic). Does NOT block implementation,
+//             but requires an explicit written justification in the design record
+//             (ADR or equivalent). Silently ignoring warnings is not allowed.
+//
+//   info    — Non-blocking observation for visibility only. No action required.
+//             Reserved for future observability hooks (Unit 2.3+).
+//
+// Enforcement:
+//   isDesignValid(spec) := lintLoopDesign(spec).every(i => i.severity !== "error")
 
 export type LoopStage =
   | "proposer"
@@ -41,7 +58,7 @@ export interface LoopDesignSpec {
   errorTypes: ErrorTypeSpec[]
 }
 
-export type IssueSeverity = "error" | "warning"
+export type IssueSeverity = "error" | "warning" | "info"
 
 export interface DesignIssue {
   rule: string        // which invariant this violates
