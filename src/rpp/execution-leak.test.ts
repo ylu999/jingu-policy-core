@@ -106,6 +106,7 @@ const POLICY_FILES = new Set(
       rel.startsWith("policies/") ||
       rel.startsWith("rpp/") ||
       rel.startsWith("design-audit/") ||
+      rel.startsWith("loop-events/") ||
       rel === "evaluate-v4.ts" ||
       rel === "evaluate-v5.ts" ||
       rel === "coherence-check.ts" ||

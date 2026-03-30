@@ -111,3 +111,5 @@ export type { GateVerdict, GateResult, GateContext, Gate, ExecutorVerdict, GateE
 
 export { lintLoopDesign, isDesignValid, checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement } from "./design-audit/index.js"
 export type { LoopDesignSpec, DesignIssue, ErrorTypeSpec, RetryPolicy, LoopStage, ErrorLayer, IssueSeverity } from "./design-audit/index.js"
+
+export * from "./loop-events/index.js"
