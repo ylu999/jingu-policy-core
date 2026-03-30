@@ -253,6 +253,41 @@ jingu-policy-core  → enforces governance
 
 ---
 
+## 11. Adapter Contract (for integration builders)
+
+If you are building a CI adapter, IDE plugin, workflow integration, or any system
+that wraps or extends Design Audit, the following rules apply:
+
+**Rule A — Do not redefine what `jingu-policy-core` already defines.**
+`IssueSeverity`, `RuleKind`, `DesignIssue`, issue codes, severity semantics,
+and rule logic are the canonical source of truth. Your adapter must consume
+them, not reproduce them.
+
+**Rule B — Do not hardcode issue codes as strings.**
+Import issue codes from `@jingu/policy-core` types or compare against
+`DesignIssue.code` values. Hardcoding `"UNBOUNDED_RETRY_RISK"` in your
+adapter creates a dependency that will break silently when you fail to update.
+
+**Rule C — Do not invent a parallel severity model.**
+If your tool needs to filter or gate on severity, use `DesignIssue.severity`
+directly. Do not map it to a second scale (e.g. critical/major/minor).
+Two severity scales in the same pipeline cannot be reconciled.
+
+**Rule D — Treat issue codes as a public API.**
+`DesignIssue.code` values follow the stability contract in §5. Build
+justification maps, CI policies, and allow/deny lists against these codes.
+They will not be renamed without deprecation.
+
+**Rule E — Expose `remediation_hint` to the user.**
+Every issue includes a `remediation_hint`. Your adapter should surface it
+wherever it surfaces the issue message. Suppressing it removes the only
+machine-readable next-step guidance.
+
+**Summary:** your adapter adds *when to run* and *how to present results*,
+not *what the rules mean*. The rules live here.
+
+---
+
 ## Usage
 
 ```
