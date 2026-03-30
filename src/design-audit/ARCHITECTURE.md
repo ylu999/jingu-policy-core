@@ -56,6 +56,24 @@ These define **how correctness is enforced in code**:
 
 ---
 
+### 1.3 Boundary Principle: Definition vs Usage
+
+Governance principles, rule semantics, severity models, and issue contracts
+must be defined in `jingu-policy-core` as the reusable source of truth.
+
+Workflow adapters (for example `.claude` rule files) may reference these assets
+and enforce when they must be used, but must not redefine or duplicate the
+governing principles themselves.
+
+**Reason:**
+Duplicated canonical definitions drift over time and create parallel governance
+layers that cannot be reconciled.
+
+**Invariant:**
+There must be exactly one canonical definition for every governance principle.
+
+---
+
 ## 2. Severity Model (Execution Boundary)
 
 ```
