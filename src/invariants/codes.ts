@@ -1,0 +1,29 @@
+export type InvariantSeverity = "error" | "warning"
+
+export const InvariantCodes = {
+  // transition
+  MISSING_VERIFY:                    "MISSING_VERIFY",
+  INVALID_VERIFY_SPEC:               "INVALID_VERIFY_SPEC",
+  VERIFY_NOT_EVIDENCE_BASED:         "VERIFY_NOT_EVIDENCE_BASED",
+  TRANSITION_WITHOUT_PASSING_VERIFY: "TRANSITION_WITHOUT_PASSING_VERIFY",
+  STATE_CHANGED_WITHOUT_TRANSITION:  "STATE_CHANGED_WITHOUT_TRANSITION",
+  // execution
+  NO_OBSERVABLE_OUTPUT:              "NO_OBSERVABLE_OUTPUT",
+  NO_OP_FORBIDDEN:                   "NO_OP_FORBIDDEN",
+  SCOPE_VIOLATION:                   "SCOPE_VIOLATION",
+  NON_TYPED_FAILURE:                 "NON_TYPED_FAILURE",
+  // replay
+  NON_REPLAYABLE_EXECUTION:          "NON_REPLAYABLE_EXECUTION",
+  MISSING_DECISION_LOG:              "MISSING_DECISION_LOG",
+  // event log
+  INVALID_EVENT_SEQUENCE:            "INVALID_EVENT_SEQUENCE",
+  MISSING_ATTEMPT_ID:                "MISSING_ATTEMPT_ID",
+  MISSING_EVENT_STATUS:              "MISSING_EVENT_STATUS",
+  // multi-agent
+  CANDIDATE_WRITES_CANONICAL_STATE:  "CANDIDATE_WRITES_CANONICAL_STATE",
+  MERGED_RESULT_NOT_REVERIFIED:      "MERGED_RESULT_NOT_REVERIFIED",
+  // version
+  STALE_STATE_VERSION:               "STALE_STATE_VERSION",
+} as const
+
+export type InvariantCode = typeof InvariantCodes[keyof typeof InvariantCodes]

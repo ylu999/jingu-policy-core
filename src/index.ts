@@ -113,3 +113,4 @@ export { lintLoopDesign, isDesignValid, checkStateMachineCompleteness, checkLaye
 export type { LoopDesignSpec, DesignIssue, ErrorTypeSpec, RetryPolicy, LoopStage, ErrorLayer, IssueSeverity } from "./design-audit/index.js"
 
 export * from "./loop-events/index.js"
+export * from "./invariants/index.js"
