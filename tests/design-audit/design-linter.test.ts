@@ -406,3 +406,107 @@ describe("Rule 5 — checkWarningJustifications", () => {
     assert.deepEqual(issues, [])
   })
 })
+
+// ---------------------------------------------------------------------------
+// Meta-test: principle → rule mapping is live (not just documented)
+//
+// ARCHITECTURE.md §7 states: every design principle must map to at least
+// one concrete rule. These tests verify the mapping is real — that the
+// principles are enforced by actual rule emissions, not just comments.
+// ---------------------------------------------------------------------------
+
+describe("meta: principle → rule mapping is live", () => {
+  it("State Machine Completeness maps to at least one error-severity invariant rule", () => {
+    const spec = makeValidSpec()
+    spec.verdicts = ["pass", "fail", "reject"]  // missing invalid_output
+    const issues = lintLoopDesign(spec)
+    assert.ok(
+      issues.some(i => i.severity === "error" && i.kind === "invariant"),
+      "State Machine Completeness must emit at least one error-level invariant issue"
+    )
+  })
+
+  it("Layer Separation maps to at least one error-severity invariant rule", () => {
+    const spec = makeValidSpec()
+    spec.stages = ["proposer", "reviewer", "gates"]  // reviewer without binding_validator
+    const issues = lintLoopDesign(spec)
+    assert.ok(
+      issues.some(i => i.severity === "error" && i.kind === "invariant"),
+      "Layer Separation must emit at least one error-level invariant issue"
+    )
+  })
+
+  it("Recoverability maps to at least one error-severity invariant rule", () => {
+    const spec = makeValidSpec()
+    spec.retryPolicy.retryOn = ["MISSING_REQUIRED_STAGE"]  // non-recoverable in retryOn
+    const issues = lintLoopDesign(spec)
+    assert.ok(
+      issues.some(i => i.severity === "error" && i.kind === "invariant"),
+      "Recoverability must emit at least one error-level invariant issue"
+    )
+  })
+
+  it("Contract Enforcement maps to at least one error-severity invariant rule", () => {
+    const spec = makeValidSpec()
+    spec.verdicts = ["pass", "fail", "reject"]  // contract violations have no verdict
+    const issues = lintLoopDesign(spec)
+    assert.ok(
+      issues.some(i => i.severity === "error" && i.kind === "invariant"),
+      "Contract Enforcement must emit at least one error-level invariant issue"
+    )
+  })
+
+  it("every error-severity issue has kind=invariant (severity/kind alignment)", () => {
+    // Run a spec that triggers multiple errors across all rules
+    const spec = makeValidSpec()
+    spec.verdicts = ["pass", "fail"]                          // missing invalid_output
+    spec.stages = ["proposer", "reviewer", "gates"]           // reviewer before binding
+    spec.retryPolicy.retryOn = ["MISSING_REQUIRED_STAGE"]     // non-recoverable retry
+    const issues = lintLoopDesign(spec)
+    const errors = issues.filter(i => i.severity === "error")
+    assert.ok(errors.length > 0, "should have errors")
+    assert.ok(
+      errors.every(i => i.kind === "invariant"),
+      `all error-severity issues must have kind=invariant. Violations: ${
+        errors.filter(i => i.kind !== "invariant").map(i => i.code).join(", ")
+      }`
+    )
+  })
+
+  it("every warning-severity issue has kind=heuristic (severity/kind alignment)", () => {
+    const spec = makeValidSpec()
+    spec.retryPolicy.maxAttempts = 4   // UNBOUNDED_RETRY_RISK (warning/heuristic)
+    const issues = lintLoopDesign(spec)
+    const warnings = issues.filter(i => i.severity === "warning")
+    assert.ok(warnings.length > 0, "should have warnings")
+    assert.ok(
+      warnings.every(i => i.kind === "heuristic"),
+      `all warning-severity issues must have kind=heuristic. Violations: ${
+        warnings.filter(i => i.kind !== "heuristic").map(i => i.code).join(", ")
+      }`
+    )
+  })
+
+  it("every issue has a remediation_hint (actionable failure contract)", () => {
+    const spec = makeValidSpec()
+    spec.verdicts = ["pass", "fail", "reject"]    // trigger errors
+    spec.retryPolicy.maxAttempts = 4              // trigger warning
+    const issues = lintLoopDesign(spec)
+    assert.ok(issues.length > 0, "should have issues")
+    const missing = issues.filter(i => !i.remediation_hint || i.remediation_hint.trim() === "")
+    assert.deepEqual(
+      missing.map(i => i.code),
+      [],
+      "every issue must have a non-empty remediation_hint"
+    )
+  })
+
+  it("lint output is deterministic across multiple calls (same input → same order)", () => {
+    const spec = makeValidSpec()
+    spec.verdicts = ["pass", "fail", "reject"]
+    spec.retryPolicy.maxAttempts = 4
+    const run1 = lintLoopDesign(spec).map(i => i.code)
+    const run2 = lintLoopDesign(spec).map(i => i.code)
+    assert.deepEqual(run1, run2, "lintLoopDesign must produce identical output on repeated calls")
+  })
+})
