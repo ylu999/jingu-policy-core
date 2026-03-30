@@ -49,6 +49,7 @@ export function buildBrief(config: ExecutionConfig): string {
     `Each step must have: id (string), stage (one of the four above), content (array of strings), references (array of reference objects).`,
     `All references must be valid: non-empty supports field; rule_id matches RUL-NNN; method_id matches XXX-NNN.`,
     `response.references must contain at least one entry with type "derived" and from_steps listing step ids from your steps array.`,
+    `CRITICAL — reference type rules: steps[].references must use ONLY type "evidence", "rule", or "method" — NEVER "derived". Only response.references may use type "derived".`,
     `CRITICAL — from_steps rule: every value in from_steps must be an id that exists in your steps array ("s1", "s2", "s3", or "s4"). Never invent ids.`,
   ]
   // Inline example so the model can pattern-match, not just follow abstract rules.
