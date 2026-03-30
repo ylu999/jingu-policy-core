@@ -103,3 +103,6 @@ export type {
 
 export { buildBrief } from "./brief/brief-builder"
 export type { BriefString } from "./brief/brief-builder"
+
+export { runGates, resolveGates, GATE_REGISTRY, evidenceRequiredGate, verifyGate, noOpDetectionGate, scopeGate, testPassGate, multiOptionGate, designCompletenessGate } from "./gates/gate-engine"
+export type { GateVerdict, GateResult, GateContext, Gate, ExecutorVerdict, GateExecutorResult } from "./gates/gate-engine"
