@@ -71,9 +71,54 @@ export interface LoopDesignSpec {
 
 export type IssueSeverity = "error" | "warning" | "info"
 
+/**
+ * RuleKind — the nature of the rule that produced an issue.
+ *
+ *   invariant    — a system correctness property. Violation means the system
+ *                  can produce incorrect or undefined behavior. Maps to "error".
+ *
+ *   heuristic    — a quality recommendation backed by experience. Violation
+ *                  is allowed but must be explicitly justified. Maps to "warning".
+ *
+ *   observation  — a non-blocking signal for visibility. Maps to "info".
+ */
+export type RuleKind = "invariant" | "heuristic" | "observation"
+
+/**
+ * Stable public issue codes — treated as a public contract.
+ *
+ * Once emitted in a release, codes must not be renamed or removed.
+ * Consumers build justification maps, CI policies, and dashboards on these.
+ * To deprecate a code: keep emitting it, add a note in the message.
+ *
+ * Current codes:
+ *   Rule 1 — State Machine Completeness
+ *     INVALID_RETRY_POLICY            (invariant / error)
+ *     UNBOUNDED_RETRY_RISK            (heuristic / warning)
+ *     MISSING_INVALID_OUTPUT_VERDICT  (invariant / error)
+ *     REVIEWER_BEFORE_BINDING         (invariant / error)
+ *
+ *   Rule 2 — Layer Separation
+ *     SEMANTICS_WITHOUT_STRUCTURE_GATE  (invariant / error)
+ *     MIXED_LAYER_RETRY                 (heuristic / warning)
+ *
+ *   Rule 3 — Recoverability
+ *     UNDEFINED_RETRY_CODE     (invariant / error)
+ *     NON_RECOVERABLE_RETRY    (invariant / error)
+ *     RETRY_WITH_NO_TRIGGER    (heuristic / warning)
+ *
+ *   Rule 4 — Contract Enforcement
+ *     CONTRACT_VIOLATIONS_WITHOUT_VERDICT  (invariant / error)
+ *     SYNTAX_ERROR_RETRIED                 (heuristic / warning)
+ *
+ *   Rule 5 — Warning Justification
+ *     WARNING_WITHOUT_JUSTIFICATION  (heuristic / warning)
+ */
 export interface DesignIssue {
-  rule: string        // which invariant this violates
-  code: string        // machine-readable code
+  rule: string             // which invariant this violates
+  code: string             // machine-readable code (stable public contract — never rename)
+  kind: RuleKind           // invariant | heuristic | observation
   severity: IssueSeverity
   message: string
+  remediation_hint?: string  // what to do next (not auto-fix, just guidance)
 }

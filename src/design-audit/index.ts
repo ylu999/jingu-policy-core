@@ -16,6 +16,8 @@ import { checkStateMachineCompleteness, checkLayerSeparation, checkRecoverabilit
 
 export { checkStateMachineCompleteness, checkLayerSeparation, checkRecoverability, checkContractEnforcement, checkWarningJustifications }
 
+const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2 }
+
 export function lintLoopDesign(spec: LoopDesignSpec): DesignIssue[] {
   if (spec == null) throw new Error("lintLoopDesign: spec is required")
   const priorIssues = [
@@ -24,10 +26,21 @@ export function lintLoopDesign(spec: LoopDesignSpec): DesignIssue[] {
     ...checkRecoverability(spec),
     ...checkContractEnforcement(spec),
   ]
-  return [
+  const allIssues = [
     ...priorIssues,
     ...checkWarningJustifications(spec, priorIssues),
   ]
+  // Deterministic output order: severity → rule → code
+  // Guarantees stable snapshot tests and machine-readable output across runs.
+  return allIssues.sort((a, b) => {
+    const sv = (SEVERITY_ORDER[a.severity] ?? 99) - (SEVERITY_ORDER[b.severity] ?? 99)
+    if (sv !== 0) return sv
+    if (a.rule < b.rule) return -1
+    if (a.rule > b.rule) return 1
+    if (a.code < b.code) return -1
+    if (a.code > b.code) return 1
+    return 0
+  })
 }
 
 /** Convenience: returns true if the spec has no error-severity issues. */

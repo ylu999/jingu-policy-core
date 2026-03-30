@@ -346,7 +346,7 @@ describe("severity enforcement contract", () => {
 describe("Rule 5 — checkWarningJustifications", () => {
   it("warning with no justification → WARNING_WITHOUT_JUSTIFICATION", () => {
     const priorIssues = [
-      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", severity: "warning" as const, message: "..." },
+      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", kind: "heuristic" as const, severity: "warning" as const, message: "..." },
     ]
     const spec = makeValidSpec()  // no justifications field
     const issues = checkWarningJustifications(spec, priorIssues)
@@ -355,7 +355,7 @@ describe("Rule 5 — checkWarningJustifications", () => {
 
   it("warning with empty string justification → WARNING_WITHOUT_JUSTIFICATION", () => {
     const priorIssues = [
-      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", severity: "warning" as const, message: "..." },
+      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", kind: "heuristic" as const, severity: "warning" as const, message: "..." },
     ]
     const spec = makeValidSpec()
     spec.justifications = { UNBOUNDED_RETRY_RISK: "   " }  // whitespace only
@@ -365,7 +365,7 @@ describe("Rule 5 — checkWarningJustifications", () => {
 
   it("warning with written justification → no WARNING_WITHOUT_JUSTIFICATION", () => {
     const priorIssues = [
-      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", severity: "warning" as const, message: "..." },
+      { rule: "r1", code: "UNBOUNDED_RETRY_RISK", kind: "heuristic" as const, severity: "warning" as const, message: "..." },
     ]
     const spec = makeValidSpec()
     spec.justifications = { UNBOUNDED_RETRY_RISK: "Accepted: load-test scenario requires 5 attempts." }
@@ -375,7 +375,7 @@ describe("Rule 5 — checkWarningJustifications", () => {
 
   it("no warnings in prior issues → no output", () => {
     const priorIssues = [
-      { rule: "r1", code: "INVALID_RETRY_POLICY", severity: "error" as const, message: "..." },
+      { rule: "r1", code: "INVALID_RETRY_POLICY", kind: "invariant" as const, severity: "error" as const, message: "..." },
     ]
     const spec = makeValidSpec()
     const issues = checkWarningJustifications(spec, priorIssues)

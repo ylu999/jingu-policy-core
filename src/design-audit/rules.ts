@@ -25,8 +25,10 @@ export function checkStateMachineCompleteness(spec: LoopDesignSpec): DesignIssue
     issues.push({
       rule: "state_machine_completeness",
       code: "INVALID_RETRY_POLICY",
+      kind: "invariant",
       severity: "error",
       message: "retryPolicy.maxAttempts must be > 0. A loop with 0 attempts has no execution path.",
+      remediation_hint: "Set retryPolicy.maxAttempts to 1 (single attempt, no retry) or higher.",
     })
   }
 
@@ -34,8 +36,10 @@ export function checkStateMachineCompleteness(spec: LoopDesignSpec): DesignIssue
     issues.push({
       rule: "state_machine_completeness",
       code: "UNBOUNDED_RETRY_RISK",
+      kind: "heuristic",
       severity: "warning",
       message: `retryPolicy.maxAttempts=${spec.retryPolicy.maxAttempts} is high. Loops with >3 attempts risk non-termination under adversarial LLM behavior.`,
+      remediation_hint: "Reduce retryPolicy.maxAttempts to <= 3, or add spec.justifications[\"UNBOUNDED_RETRY_RISK\"] explaining why higher retry is required.",
     })
   }
 
@@ -43,8 +47,10 @@ export function checkStateMachineCompleteness(spec: LoopDesignSpec): DesignIssue
     issues.push({
       rule: "state_machine_completeness",
       code: "MISSING_INVALID_OUTPUT_VERDICT",
+      kind: "invariant",
       severity: "error",
       message: "Verdict set does not include 'invalid_output'. Contract violations (syntax/structure failures) have no deterministic terminal state.",
+      remediation_hint: "Add 'invalid_output' to verdicts.",
     })
   }
 
@@ -55,8 +61,10 @@ export function checkStateMachineCompleteness(spec: LoopDesignSpec): DesignIssue
     issues.push({
       rule: "state_machine_completeness",
       code: "REVIEWER_BEFORE_BINDING",
+      kind: "invariant",
       severity: "error",
       message: "Stage 'reviewer' appears before 'binding_validator'. Reviewer must never run on structurally invalid output — binding validation is a precondition for semantic evaluation.",
+      remediation_hint: "Reorder stages so 'binding_validator' appears before 'reviewer'.",
     })
   }
 
@@ -89,8 +97,10 @@ export function checkLayerSeparation(spec: LoopDesignSpec): DesignIssue[] {
       issues.push({
         rule: "layer_separation",
         code: "MIXED_LAYER_RETRY",
+        kind: "heuristic",
         severity: "warning",
         message: "Both syntax-layer and structure-layer errors are in retryOn. These are different failure modes (JSON parsing vs provenance graph) and should be handled with different retry strategies.",
+        remediation_hint: "Separate retry handling: syntax failures usually mean the LLM ignored the format entirely (consider not retrying); structure failures may be recoverable with targeted feedback.",
       })
     }
   }
@@ -100,8 +110,10 @@ export function checkLayerSeparation(spec: LoopDesignSpec): DesignIssue[] {
     issues.push({
       rule: "layer_separation",
       code: "SEMANTICS_WITHOUT_STRUCTURE_GATE",
+      kind: "invariant",
       severity: "error",
       message: "Stage 'reviewer' (semantics layer) is present but 'binding_validator' (structure layer) is absent. Semantic evaluation of structurally invalid output produces undefined behavior.",
+      remediation_hint: "Add 'binding_validator' to stages before 'reviewer'.",
     })
   }
 
@@ -129,8 +141,10 @@ export function checkRecoverability(spec: LoopDesignSpec): DesignIssue[] {
       issues.push({
         rule: "recoverability",
         code: "UNDEFINED_RETRY_CODE",
+        kind: "invariant",
         severity: "error",
         message: `retryOn includes error code "${code}" which is not defined in errorTypes. Cannot determine recoverability.`,
+        remediation_hint: `Add an ErrorTypeSpec with code="${code}" to errorTypes, or remove "${code}" from retryOn.`,
       })
       continue
     }
@@ -138,8 +152,10 @@ export function checkRecoverability(spec: LoopDesignSpec): DesignIssue[] {
       issues.push({
         rule: "recoverability",
         code: "NON_RECOVERABLE_RETRY",
+        kind: "invariant",
         severity: "error",
         message: `Error "${code}" (layer: ${errorSpec.layer}) is marked recoverable=false but appears in retryOn. Retrying non-recoverable errors wastes a loop attempt without improving outcome probability.`,
+        remediation_hint: `Remove "${code}" from retryOn, or set its recoverable=true if prompt feedback can actually fix this error.`,
       })
     }
   }
@@ -148,8 +164,10 @@ export function checkRecoverability(spec: LoopDesignSpec): DesignIssue[] {
     issues.push({
       rule: "recoverability",
       code: "RETRY_WITH_NO_TRIGGER",
+      kind: "heuristic",
       severity: "warning",
       message: "maxAttempts > 1 but retryOn is empty. Retry is configured but has no trigger condition — the extra attempt will never be used.",
+      remediation_hint: "Either set maxAttempts=1, or add recoverable error codes to retryOn.",
     })
   }
 
@@ -200,8 +218,10 @@ export function checkWarningJustifications(
       issues.push({
         rule: "warning_justification",
         code: "WARNING_WITHOUT_JUSTIFICATION",
+        kind: "heuristic",
         severity: "warning",
         message: `Warning "${code}" has no justification in spec.justifications. Silently accepting a warning is not allowed — record why this deviation is acceptable in this context.`,
+        remediation_hint: `Add spec.justifications["${code}"] = "<your rationale>" to record that this deviation is an intentional decision.`,
       })
     }
   }
@@ -219,8 +239,10 @@ export function checkContractEnforcement(spec: LoopDesignSpec): DesignIssue[] {
     issues.push({
       rule: "contract_enforcement",
       code: "CONTRACT_VIOLATIONS_WITHOUT_VERDICT",
+      kind: "invariant",
       severity: "error",
       message: "ErrorTypes include syntax or structure layer errors (LLM contract violations) but 'invalid_output' is not in verdicts. Contract violations cannot be distinguished from execution failures.",
+      remediation_hint: "Add 'invalid_output' to verdicts to give contract violations a distinct terminal state.",
     })
   }
 
@@ -231,8 +253,10 @@ export function checkContractEnforcement(spec: LoopDesignSpec): DesignIssue[] {
       issues.push({
         rule: "contract_enforcement",
         code: "SYNTAX_ERROR_RETRIED",
+        kind: "heuristic",
         severity: "warning",
         message: `Syntax error "${err.code}" is in retryOn. Syntax failures mean the LLM did not produce parseable output — retry may help for transient issues but should only apply if the error is explicitly marked recoverable=true.`,
+        remediation_hint: `Only retry "${err.code}" if recoverable=true. For persistent syntax failures, route to invalid_output instead.`,
       })
     }
   }
