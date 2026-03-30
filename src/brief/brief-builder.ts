@@ -10,6 +10,7 @@ import { ExecutionConfig } from "../resolver/policy-resolver.js"
 export type BriefString = string
 
 export function buildBrief(config: ExecutionConfig): string {
+  // == null catches both null and undefined in one guard
   if (config == null) {
     throw new Error("buildBrief: config is required")
   }
@@ -30,13 +31,16 @@ export function buildBrief(config: ExecutionConfig): string {
   const gatesSection = renderSection("REQUIRED GATES", config.required_gates)
 
   // Section 3: EXECUTION CONTEXT
-  // Execution directives — separate from policy constraints.
+  // Not rendered via renderSection — this section is key-value pairs, not a
+  // bullet list of items. renderSection assumes a list; inlining keeps it clear.
   const contextLines = [
     `Execution mode: ${config.execution_mode}`,
     `Reviewer mode: ${config.reviewer_mode}`,
   ]
   const contextSection = `## EXECUTION CONTEXT\n${contextLines.join("\n")}`
 
+  // renderSection produces no trailing newline, so "\n\n" yields exactly one
+  // blank line between sections. Do not add trailing newlines to renderSection.
   return [policiesSection, gatesSection, contextSection].join("\n\n")
 }
 
