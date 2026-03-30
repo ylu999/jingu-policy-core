@@ -44,11 +44,22 @@ export function buildBrief(config: ExecutionConfig): string {
   const contractLines = [
     `Respond with a single JSON object matching the RPP schema v1.`,
     `Do not include any prose outside the JSON object.`,
-    `Required fields: schema_version ("rpp.v1"), call_id, steps (all 4 stages), response.`,
-    `All references must be valid: non-empty locator/supports, rule_id matches RUL-NNN, method_id matches XXX-NNN.`,
-    `If uncertain, produce a best-effort valid RPP JSON — do not omit required fields or stages.`,
+    `Required top-level fields: schema_version ("rpp.v1"), call_id, steps, response.`,
+    `steps must contain exactly 4 objects with ids "s1", "s2", "s3", "s4" and stages "interpretation", "reasoning", "decision", "action" — in that order.`,
+    `Each step must have: id (string), stage (one of the four above), content (array of strings), references (array of reference objects).`,
+    `All references must be valid: non-empty supports field; rule_id matches RUL-NNN; method_id matches XXX-NNN.`,
+    `response.references must contain at least one entry with type "derived" and from_steps listing step ids from your steps array.`,
+    `CRITICAL — from_steps rule: every value in from_steps must be an id that exists in your steps array ("s1", "s2", "s3", or "s4"). Never invent ids.`,
   ]
-  const contractSection = `## OUTPUT CONTRACT\n${contractLines.map((l) => `- ${l}`).join("\n")}`
+  // Inline example so the model can pattern-match, not just follow abstract rules.
+  const contractExample = `\n## OUTPUT CONTRACT EXAMPLE\n` +
+    `{"schema_version":"rpp.v1","call_id":"c1","steps":[` +
+    `{"id":"s1","stage":"interpretation","content":["I understand the task."],"references":[{"type":"evidence","source":"user_input","locator":"message","supports":"task description"}]},` +
+    `{"id":"s2","stage":"reasoning","content":["Analysis here."],"references":[{"type":"method","method_id":"RCA-001","supports":"root cause reasoning"}]},` +
+    `{"id":"s3","stage":"decision","content":["I will do X."],"references":[{"type":"rule","rule_id":"RUL-001","supports":"decision rule"}]},` +
+    `{"id":"s4","stage":"action","content":["Taking action."],"references":[{"type":"evidence","source":"file","locator":"src/foo.ts:10","supports":"file being acted on"}]}` +
+    `],"response":{"content":["Summary."],"references":[{"type":"derived","from_steps":["s3","s4"],"supports":"derived from decision and action"}]}}`
+  const contractSection = `## OUTPUT CONTRACT\n${contractLines.map((l) => `- ${l}`).join("\n")}` + contractExample
 
   // renderSection produces no trailing newline, so "\n\n" yields exactly one
   // blank line between sections. Do not add trailing newlines to renderSection.
