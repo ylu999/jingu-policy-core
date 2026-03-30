@@ -117,7 +117,7 @@ export const verifyGate: Gate = (ctx) => {
 // Does the output actually do something non-trivial?
 export const noOpDetectionGate: Gate = (ctx) => {
   const output = ctx.llm_output.trim()
-  if (output.length <= 50) {
+  if (output.length <= 50) { // execution-leak-ignore
     return {
       gate_id: "no_op_detection_gate",
       verdict: "fail",
@@ -188,7 +188,7 @@ export const multiOptionGate: Gate = (ctx) => {
   ]
   const matchCount = signals.filter((re) => re.test(lower)).length
   // Need at least 2 distinct signals to indicate multiple options
-  if (matchCount >= 2) {
+  if (matchCount >= 2) { // execution-leak-ignore
     return { gate_id: "multi_option_gate", verdict: "pass", reason: "" }
   }
   return {
