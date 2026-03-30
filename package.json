@@ -21,7 +21,8 @@
     "test": "node --test 'dist/tests/**/*.test.js' 'dist/tests/*.test.js' 'dist/src/**/*.test.js'",
     "test:src": "npx tsc --noEmit",
     "demo:resolver": "npm run build && node dist/demo/policy-resolver-demo.js",
-    "demo:brief": "npm run build && node dist/demo/brief-builder-demo.js"
+    "demo:brief": "npm run build && node dist/demo/brief-builder-demo.js",
+    "demo:gates": "npm run build && node dist/demo/gate-engine-demo.js"
   },
   "dependencies": {
     "jingu-protocol": "file:../jingu-protocol"
