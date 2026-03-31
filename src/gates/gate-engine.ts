@@ -88,7 +88,12 @@ function containsAny(text: string, keywords: string[]): boolean {
 // evidence_required_gate
 // Does the output cite evidence or reasons for its claims?
 export const evidenceRequiredGate: Gate = (ctx) => {
-  const markers = ["because", "based on", "source:", "evidence:", "reason:", "due to", "since", "as shown", "according to"]
+  const markers = [
+    "because", "based on", "source:", "evidence:", "reason:", "due to", "since", "as shown", "according to",
+    // structured reasoning patterns: pros/cons, tradeoff analysis, justification
+    "pros:", "cons:", "pro:", "con:", "tradeoff", "trade-off", "justified by", "support for", "rationale",
+    "appropriate when", "when to use", "suitable for",
+  ]
   if (containsAny(ctx.llm_output, markers)) {
     return { gate_id: "evidence_required_gate", verdict: "pass", reason: "" }
   }
@@ -174,11 +179,17 @@ export const testPassGate: Gate = (ctx) => {
 // Does the output present at least 2 options or alternatives?
 export const multiOptionGate: Gate = (ctx) => {
   const lower = ctx.llm_output.toLowerCase()
-  // Count distinct option signals
+  // Count distinct option signals.
+  // Each signal must represent a different numbered/labeled option so that
+  // "Option 1" and "Option 2" each count separately (not as one pattern).
   const signals = [
-    /option\s*[1-9]/,
-    /alternative\s*[1-9]/,
-    /approach\s*[1-9]/,
+    /option\s*1/,
+    /option\s*2/,
+    /option\s*3/,
+    /alternative\s*1/,
+    /alternative\s*2/,
+    /approach\s*1/,
+    /approach\s*2/,
     /\b1\.\s/,
     /\b2\.\s/,
     /\bfirst[ly]?\b/,
