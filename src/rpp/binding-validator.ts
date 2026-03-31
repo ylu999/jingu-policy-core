@@ -82,9 +82,13 @@ const REQUIRED_STAGES: Array<CognitiveStep["stage"]> = [
   "action",
 ]
 
+// STRUCTURE_OVER_SURFACE: these patterns check ID *syntax* (format validity),
+// not semantic validity. Format validity is a legitimate use of regex — it ensures
+// the ID conforms to the declared naming convention.
+// Semantic validity (does the ID exist in a registry?) requires a caller-provided
+// registry — binding-validator accepts optional registries via validateRPPBinding options.
 const RULE_ID_PATTERN = /^RUL-\d{3}$/
 const METHOD_ID_PATTERN = /^[A-Z]{2,6}-\d{3}$/
-const SUPPORTS_MINIMAL_LENGTH = 8
 
 // ---------------------------------------------------------------------------
 // Layer A — validateRPPBinding
@@ -289,7 +293,10 @@ export function checkRPPStrictness(record: RPPRecord): BindingValidationResult {
     }
   }
 
-  // B4 (warning): SUPPORTS_MINIMAL — across all steps and response
+  // B4 (warning): SUPPORTS_MINIMAL — supports field must not be empty.
+  // Empty supports means the reference doesn't declare what claim it grounds.
+  // This is a semantic check (does the reference actually ground something?),
+  // not a length check. Length is NOT a quality proxy (VERIFY_SEMANTICS_NOT_FORMAT).
   const allStepsAndResponse: Array<{ refs: Reference[]; context: string }> = [
     ...record.steps.map((s) => ({ refs: s.references ?? [], context: s.id ?? s.stage })),
     { refs: record.response.references ?? [], context: "response" },
@@ -297,11 +304,11 @@ export function checkRPPStrictness(record: RPPRecord): BindingValidationResult {
   for (const { refs, context } of allStepsAndResponse) {
     for (let i = 0; i < refs.length; i++) {
       const supports = refs[i]!.supports?.trim() ?? ""
-      if (supports.length > 0 && supports.length < SUPPORTS_MINIMAL_LENGTH) {
+      if (supports.length === 0) {
         warnings.push({
           code: "SUPPORTS_MINIMAL",
           ref_index: i,
-          message: `"${context}" ref[${i}] supports field is very short (${supports.length} chars). Consider a more descriptive supports value.`,
+          message: `"${context}" ref[${i}] supports field is empty. Declare what claim this reference grounds.`,
         })
       }
     }

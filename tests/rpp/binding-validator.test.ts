@@ -330,14 +330,21 @@ describe("checkRPPStrictness — RESPONSE_NOT_LINKED_TO_DECISION_OR_ACTION", () 
 // ---------------------------------------------------------------------------
 
 describe("checkRPPStrictness — SUPPORTS_MINIMAL", () => {
-  it("very short supports value → warning", () => {
+  it("empty supports value → warning (semantic: reference grounds nothing)", () => {
     const record = makeValidRecord()
-    record.steps[0]!.references = [{ type: "evidence", source: "file", locator: "src/x.ts", supports: "ok" }]
+    record.steps[0]!.references = [{ type: "evidence", source: "file", locator: "src/x.ts", supports: "" }]
     const result = checkRPPStrictness(record)
     assert.ok(result.warnings.some((w) => w.code === "SUPPORTS_MINIMAL"))
   })
 
-  it("sufficiently long supports → no warning", () => {
+  it("short but non-empty supports ('ok') → no warning (length is not a quality proxy)", () => {
+    const record = makeValidRecord()
+    record.steps[0]!.references = [{ type: "evidence", source: "file", locator: "src/x.ts", supports: "ok" }]
+    const result = checkRPPStrictness(record)
+    assert.ok(!result.warnings.some((w) => w.code === "SUPPORTS_MINIMAL"))
+  })
+
+  it("non-empty supports → no warning", () => {
     const result = checkRPPStrictness(makeValidRecord())
     assert.ok(!result.warnings.some((w) => w.code === "SUPPORTS_MINIMAL"))
   })
