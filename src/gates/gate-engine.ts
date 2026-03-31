@@ -8,8 +8,33 @@
 // Phase 0 gate implementations use keyword heuristics — intentionally simple.
 // Goal: validate executor precedence logic and pipeline structure.
 // Production-quality semantic gates belong to Phase 1+.
+//
+// Phase 1 RPP-aware gates: parse RPPRecord from llm_output and check structure
+// directly. Fall through to keyword fallback if RPP parse fails.
 
 import { TaskContext, ExecutionConfig } from "../resolver/policy-resolver.js"
+import type { RPPRecord, CognitiveStep } from "../rpp/rpp.types.js"
+
+// ---------------------------------------------------------------------------
+// RPP parse helper — used by RPP-aware gates
+// Returns null if llm_output is not valid RPP JSON.
+// ---------------------------------------------------------------------------
+
+function tryParseRPP(llm_output: string): RPPRecord | null {
+  try {
+    const parsed = JSON.parse(llm_output)
+    if (parsed && typeof parsed === "object" && Array.isArray(parsed.steps)) {
+      return parsed as RPPRecord
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function getStepByStage(rpp: RPPRecord, stage: CognitiveStep["stage"]): CognitiveStep | undefined {
+  return rpp.steps.find((s) => s.stage === stage)
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -224,6 +249,105 @@ export const designCompletenessGate: Gate = (ctx) => {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 1 RPP-aware gate implementations
+// ---------------------------------------------------------------------------
+
+// rpp_intent_gate
+// Checks that the interpretation step content is non-trivial (>20 chars, not // execution-leak-ignore: gate parameter, not a policy threshold
+// just "I understand"). Falls through to pass if RPP parse fails — structural
+// validity is already checked by binding-validator.
+export const rppIntentGate: Gate = (ctx) => {
+  const rpp = tryParseRPP(ctx.llm_output)
+  if (!rpp) {
+    // RPP parse failed — binding-validator handles structural errors; pass here
+    return { gate_id: "rpp_intent_gate", verdict: "pass", reason: "" }
+  }
+  const step = getStepByStage(rpp, "interpretation")
+  if (!step) {
+    return {
+      gate_id: "rpp_intent_gate",
+      verdict: "fail",
+      reason: "RPP interpretation step is missing. The proposer must restate the goal.",
+    }
+  }
+  const contentText = step.content.join(" ").trim()
+  const trivialPatterns = /^(i understand|understood|ok|okay|sure|got it|will do)[.\s!]*$/i
+  if (contentText.length <= 20 || trivialPatterns.test(contentText)) { // execution-leak-ignore: gate parameter for trivial content detection
+    return {
+      gate_id: "rpp_intent_gate",
+      verdict: "fail",
+      reason: "Interpretation step is trivial. Restate the goal precisely — what does success look like?",
+    }
+  }
+  return { gate_id: "rpp_intent_gate", verdict: "pass", reason: "" }
+}
+
+// rpp_tradeoff_gate
+// Checks that the reasoning step content presents ≥2 distinct options.
+// Falls back to multi_option_gate keyword check if RPP parse fails.
+export const rppTradeoffGate: Gate = (ctx) => {
+  const rpp = tryParseRPP(ctx.llm_output)
+  if (!rpp) {
+    // Fallback to keyword heuristic
+    return multiOptionGate(ctx)
+  }
+  const step = getStepByStage(rpp, "reasoning")
+  if (!step) {
+    return {
+      gate_id: "rpp_tradeoff_gate",
+      verdict: "fail",
+      reason: "RPP reasoning step is missing. The proposer must analyze options.",
+    }
+  }
+  const contentText = step.content.join("\n").toLowerCase()
+  // Look for numbered/labeled option signals in the reasoning content
+  const optionSignals = [
+    /option\s*1/, /option\s*2/, /option\s*3/,
+    /approach\s*1/, /approach\s*2/,
+    /alternative\s*1/, /alternative\s*2/,
+    /\b1\.\s/, /\b2\.\s/,
+    /\bfirst[ly]?\b/, /\bsecond[ly]?\b/,
+    /\ba\)\s/, /\bb\)\s/,
+  ]
+  const matchCount = optionSignals.filter((re) => re.test(contentText)).length
+  if (matchCount >= 2) { // execution-leak-ignore
+    return { gate_id: "rpp_tradeoff_gate", verdict: "pass", reason: "" }
+  }
+  return {
+    gate_id: "rpp_tradeoff_gate",
+    verdict: "fail",
+    reason: "Reasoning step does not present multiple options or alternatives. Provide at least 2 distinct approaches with explicit tradeoffs.",
+  }
+}
+
+// rpp_risk_gate
+// Checks that the decision or action step content mentions risk/failure/mitigation.
+// Falls back to design_completeness_gate keyword check if RPP parse fails.
+export const rppRiskGate: Gate = (ctx) => {
+  const rpp = tryParseRPP(ctx.llm_output)
+  if (!rpp) {
+    // Fallback to keyword heuristic
+    return designCompletenessGate(ctx)
+  }
+  const decisionStep = getStepByStage(rpp, "decision")
+  const actionStep = getStepByStage(rpp, "action")
+  const combined = [
+    ...(decisionStep?.content ?? []),
+    ...(actionStep?.content ?? []),
+  ].join("\n").toLowerCase()
+
+  const riskMarkers = ["risk", "failure", "fail", "mitigat", "rollback", "fallback", "edge case", "contingency", "if it fails", "failure mode"]
+  if (riskMarkers.some((m) => combined.includes(m))) {
+    return { gate_id: "rpp_risk_gate", verdict: "pass", reason: "" }
+  }
+  return {
+    gate_id: "rpp_risk_gate",
+    verdict: "fail",
+    reason: "Decision/action steps do not address failure modes or risks. Add at least one risk and mitigation.",
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Gate registry — maps gate_id strings to Gate functions
 // ---------------------------------------------------------------------------
 
@@ -235,6 +359,10 @@ export const GATE_REGISTRY: Record<string, Gate> = {
   test_pass_gate: testPassGate,
   multi_option_gate: multiOptionGate,
   design_completeness_gate: designCompletenessGate,
+  // Phase 1 RPP-aware gates
+  rpp_intent_gate: rppIntentGate,
+  rpp_tradeoff_gate: rppTradeoffGate,
+  rpp_risk_gate: rppRiskGate,
 }
 
 // Resolve a list of gate_ids to Gate functions.
