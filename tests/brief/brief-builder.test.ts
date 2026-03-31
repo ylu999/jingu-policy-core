@@ -62,7 +62,7 @@ describe("buildBrief — happy path", () => {
   it("sections are separated by double newline", () => {
     const result = buildBrief(makeConfig())
     const sections = result.split("\n\n")
-    assert.equal(sections.length, 4, "expected exactly 4 sections separated by double newline")
+    assert.equal(sections.length, 5, "expected exactly 5 sections separated by double newline")
   })
 })
 

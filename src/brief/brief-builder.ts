@@ -62,9 +62,33 @@ export function buildBrief(config: ExecutionConfig): string {
     `],"response":{"content":["Summary."],"references":[{"type":"derived","from_steps":["s3","s4"],"supports":"derived from decision and action"}]}}`
   const contractSection = `## OUTPUT CONTRACT\n${contractLines.map((l) => `- ${l}`).join("\n")}` + contractExample
 
+  // Section 5: REASONING SCAFFOLD
+  // Prompt-layer guidance: tells the proposer which dimensions the reviewer checks.
+  // This is not a schema requirement — it is a self-check to help the proposer
+  // produce reasoning that can survive adversarial review.
+  // No blank lines within scaffold — blank lines would split the section on "\n\n".
+  const scaffoldLines = [
+    `Before writing your response, structure your reasoning to cover these dimensions.`,
+    `The reviewer will check all 5 — missing any will cause rejection.`,
+    `1. Intent — Restate the goal precisely. What does success look like?`,
+    `2. Context — What is known, unknown, or assumed? Name missing information explicitly.`,
+    `3. Options — Present at least 2 distinct approaches. Do not jump to a single solution.`,
+    `4. Tradeoffs — Compare each option: pros, cons, and when each is appropriate.`,
+    `5. Decision — Choose one option and justify it using your analysis above.`,
+    `6. Risks — What could go wrong? For each risk, name a mitigation.`,
+    `Self-check before finalizing:`,
+    `- Did I understand the intent correctly, or did I answer a different question?`,
+    `- Did I name what context I lack or what I assumed?`,
+    `- Did I present at least 2 options with explicit tradeoffs?`,
+    `- Is my conclusion directly supported by my reasoning above?`,
+    `- Did I identify at least one risk or failure mode?`,
+    `If any answer is no, fix it. The reviewer is adversarial and will reject on any high-severity gap.`,
+  ]
+  const scaffoldSection = `## REASONING SCAFFOLD\n${scaffoldLines.join("\n")}`
+
   // renderSection produces no trailing newline, so "\n\n" yields exactly one
   // blank line between sections. Do not add trailing newlines to renderSection.
-  return [policiesSection, gatesSection, contextSection, contractSection].join("\n\n")
+  return [policiesSection, gatesSection, contextSection, contractSection, scaffoldSection].join("\n\n")
 }
 
 function renderSection(title: string, items: string[]): string {
