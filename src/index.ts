@@ -98,6 +98,7 @@ export type {
   RiskLevel,
   ExecutionMode,
   ReviewerMode,
+  ComplexityClass,
   TaskContext,
   PolicyPack,
   ExecutionConfig,

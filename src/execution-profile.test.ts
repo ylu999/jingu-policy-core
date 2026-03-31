@@ -1,29 +1,50 @@
 // execution-profile.test.ts
-// Unit tests for resolveExecutionProfile and mergeProfiles
+// Unit tests for resolveExecutionProfile and mergeProfiles (v2: 4-tier taxonomy)
 
 import { strict as assert } from "node:assert"
 import { describe, it } from "node:test"
 import { resolveExecutionProfile, mergeProfiles } from "./execution-profile.js"
-import type { ExecutionProfile } from "./execution-profile.js"
 import type { TaskContext } from "./resolver/policy-resolver.js"
 
-function ctx(task_type: TaskContext["task_type"], risk_level: TaskContext["risk_level"] = "low"): TaskContext {
-  return { task_type, risk_level }
+function ctx(
+  task_type: TaskContext["task_type"],
+  risk_level: TaskContext["risk_level"] = "low",
+  complexity_class?: TaskContext["complexity_class"],
+): TaskContext {
+  return { task_type, risk_level, complexity_class }
 }
 
-describe("resolveExecutionProfile — task type rules", () => {
-  it("design → exhaustive (token-intensive)", () => {
+describe("resolveExecutionProfile — rule 1+2: exhaustive task types", () => {
+  it("design (default complexity) → exhaustive", () => {
     assert.equal(resolveExecutionProfile(ctx("design")), "exhaustive")
   })
 
-  it("planning → exhaustive (structurally similar to design)", () => {
+  it("planning (default complexity) → exhaustive", () => {
     assert.equal(resolveExecutionProfile(ctx("planning")), "exhaustive")
   })
 
-  it("incident → exhaustive (high-stakes, depth required)", () => {
+  it("incident (default complexity) → exhaustive", () => {
     assert.equal(resolveExecutionProfile(ctx("incident")), "exhaustive")
   })
 
+  it("design + complexity_class=standard → exhaustive (explicit standard = default)", () => {
+    assert.equal(resolveExecutionProfile(ctx("design", "low", "standard")), "exhaustive")
+  })
+
+  it("design + complexity_class=heavy → deep_exhaustive", () => {
+    assert.equal(resolveExecutionProfile(ctx("design", "low", "heavy")), "deep_exhaustive")
+  })
+
+  it("planning + complexity_class=heavy → deep_exhaustive", () => {
+    assert.equal(resolveExecutionProfile(ctx("planning", "low", "heavy")), "deep_exhaustive")
+  })
+
+  it("incident + complexity_class=heavy → deep_exhaustive", () => {
+    assert.equal(resolveExecutionProfile(ctx("incident", "low", "heavy")), "deep_exhaustive")
+  })
+})
+
+describe("resolveExecutionProfile — rule 4: standard task types", () => {
   it("reasoning → standard", () => {
     assert.equal(resolveExecutionProfile(ctx("reasoning")), "standard")
   })
@@ -53,13 +74,13 @@ describe("resolveExecutionProfile — task type rules", () => {
   })
 })
 
-describe("resolveExecutionProfile — risk level escalation", () => {
-  it("reasoning + high risk → exhaustive (escalated from standard)", () => {
-    assert.equal(resolveExecutionProfile(ctx("reasoning", "high")), "exhaustive")
+describe("resolveExecutionProfile — rule 3: risk level escalation", () => {
+  it("reasoning + high risk → deep_exhaustive (escalated from standard)", () => {
+    assert.equal(resolveExecutionProfile(ctx("reasoning", "high")), "deep_exhaustive")
   })
 
-  it("reasoning + critical risk → exhaustive (escalated from standard)", () => {
-    assert.equal(resolveExecutionProfile(ctx("reasoning", "critical")), "exhaustive")
+  it("reasoning + critical risk → deep_exhaustive (escalated from standard)", () => {
+    assert.equal(resolveExecutionProfile(ctx("reasoning", "critical")), "deep_exhaustive")
   })
 
   it("reasoning + medium risk → standard (no escalation)", () => {
@@ -70,16 +91,28 @@ describe("resolveExecutionProfile — risk level escalation", () => {
     assert.equal(resolveExecutionProfile(ctx("reasoning", "low")), "standard")
   })
 
-  it("design + high risk → exhaustive (already exhaustive, stays exhaustive)", () => {
-    assert.equal(resolveExecutionProfile(ctx("design", "high")), "exhaustive")
+  it("design + high risk → deep_exhaustive (task is exhaustive, risk bumps to deep)", () => {
+    assert.equal(resolveExecutionProfile(ctx("design", "high")), "deep_exhaustive")
   })
 
-  it("execution + critical risk → exhaustive (escalated)", () => {
-    assert.equal(resolveExecutionProfile(ctx("execution", "critical")), "exhaustive")
+  it("execution + critical risk → deep_exhaustive (escalated from standard)", () => {
+    assert.equal(resolveExecutionProfile(ctx("execution", "critical")), "deep_exhaustive")
+  })
+
+  it("design + heavy + high risk → deep_exhaustive (both paths point to deep)", () => {
+    assert.equal(resolveExecutionProfile(ctx("design", "high", "heavy")), "deep_exhaustive")
   })
 })
 
-describe("mergeProfiles — higher profile wins", () => {
+describe("mergeProfiles — higher profile wins (4-tier order)", () => {
+  it("deep_exhaustive + exhaustive → deep_exhaustive", () => {
+    assert.equal(mergeProfiles("deep_exhaustive", "exhaustive"), "deep_exhaustive")
+  })
+
+  it("exhaustive + deep_exhaustive → deep_exhaustive", () => {
+    assert.equal(mergeProfiles("exhaustive", "deep_exhaustive"), "deep_exhaustive")
+  })
+
   it("exhaustive + standard → exhaustive", () => {
     assert.equal(mergeProfiles("exhaustive", "standard"), "exhaustive")
   })
@@ -108,11 +141,15 @@ describe("mergeProfiles — higher profile wins", () => {
     assert.equal(mergeProfiles("exhaustive", "exhaustive"), "exhaustive")
   })
 
-  it("fast + exhaustive → exhaustive", () => {
-    assert.equal(mergeProfiles("fast", "exhaustive"), "exhaustive")
+  it("deep_exhaustive + deep_exhaustive → deep_exhaustive", () => {
+    assert.equal(mergeProfiles("deep_exhaustive", "deep_exhaustive"), "deep_exhaustive")
   })
 
-  it("exhaustive + fast → exhaustive", () => {
-    assert.equal(mergeProfiles("exhaustive", "fast"), "exhaustive")
+  it("fast + deep_exhaustive → deep_exhaustive", () => {
+    assert.equal(mergeProfiles("fast", "deep_exhaustive"), "deep_exhaustive")
+  })
+
+  it("deep_exhaustive + fast → deep_exhaustive", () => {
+    assert.equal(mergeProfiles("deep_exhaustive", "fast"), "deep_exhaustive")
   })
 })

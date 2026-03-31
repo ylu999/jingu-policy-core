@@ -23,9 +23,17 @@ export type ExecutionMode = "single" | "parallel" | "proposal_reviewer"
 
 export type ReviewerMode = "none" | "optional" | "required"
 
+// complexity_class — orthogonal to risk_level.
+// risk_level:      decision danger (should reviewer run?)
+// complexity_class: output complexity (how large a budget does this task need?)
+// "heavy" marks tasks with intrinsically long structured output (e.g. migration plans,
+// incident post-mortems, multi-phase design docs) that exceed the exhaustive token ceiling.
+export type ComplexityClass = "standard" | "heavy"
+
 export interface TaskContext {
   task_type: TaskType
   risk_level: RiskLevel
+  complexity_class?: ComplexityClass   // optional; defaults to "standard"
   execution_mode?: ExecutionMode
   is_irreversible?: boolean
   crosses_module_boundary?: boolean
