@@ -103,6 +103,9 @@ export type {
   ExecutionConfig,
 } from "./resolver/policy-resolver"
 
+export { resolveExecutionProfile, mergeProfiles } from "./execution-profile"
+export type { ExecutionProfile } from "./execution-profile"
+
 export { buildBrief } from "./brief/brief-builder"
 export type { BriefString } from "./brief/brief-builder"
 
