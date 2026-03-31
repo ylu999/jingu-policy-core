@@ -14,8 +14,12 @@ import {
   testPassGate,
   multiOptionGate,
   designCompletenessGate,
+  rppTradeoffGate,
+  rppRiskGate,
+  rppIntentGate,
 } from "../../src/gates/gate-engine.js"
 import type { Gate, GateContext } from "../../src/gates/gate-engine.js"
+import type { RPPRecord } from "../../src/rpp/rpp.types.js"
 import type { TaskContext, ExecutionConfig } from "../../src/resolver/policy-resolver.js"
 
 // ---------------------------------------------------------------------------
@@ -471,5 +475,158 @@ describe("runGates — integration with real gates", () => {
     // Short output that is also out of scope
     const result = runGates(gates, makeCtx("out of scope"))
     assert.equal(result.verdict, "fail")
+  })
+})
+
+// ---------------------------------------------------------------------------
+// RPP-aware gate: structural checks (STRUCTURE_OVER_SURFACE)
+// ---------------------------------------------------------------------------
+
+function makeRPP(overrides: Partial<RPPRecord> = {}): RPPRecord {
+  return {
+    call_id: "test-call",
+    steps: [
+      { id: "s1", stage: "interpretation", content: ["I understand the goal is X"], references: [{ type: "evidence", source: "user_input", locator: "message", supports: "goal" }] },
+      { id: "s2", stage: "reasoning", content: ["Approach A: use strategy X", "Approach B: use strategy Y"], references: [{ type: "method", method_id: "RCA-001", supports: "analysis" }] },
+      { id: "s3", stage: "decision", content: ["We choose approach A because of constraint Z"], references: [{ type: "rule", rule_id: "RUL-001", supports: "decision" }] },
+      { id: "s4", stage: "action", content: ["Step 1: do X. Step 2: verify."], references: [{ type: "evidence", source: "file", locator: "src/foo.ts:10", supports: "action target" }] },
+    ],
+    response: {
+      content: ["Proceeding with approach A"],
+      references: [{ type: "derived", from_steps: ["s3", "s4"], supports: "response" }],
+    },
+    ...overrides,
+  }
+}
+
+function makeCtxWithRPP(rpp: RPPRecord | null, task_type = "design"): Omit<GateContext, "gate_id"> {
+  const llm_output = rpp ? JSON.stringify(rpp) : "non-rpp plain text output about the task"
+  return {
+    llm_output,
+    task_context: { ...TASK_CTX, task_type: task_type as TaskContext["task_type"] },
+    execution_config: EXEC_CFG,
+    rpp,
+  }
+}
+
+describe("rppTradeoffGate — structural content array check", () => {
+  it("pass: reasoning step has ≥2 distinct content items", () => {
+    const rpp = makeRPP()
+    // s2 reasoning has ["Approach A: ...", "Approach B: ..."] — 2 items
+    const r = rppTradeoffGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "pass")
+    assert.equal(r.gate_id, "rpp_tradeoff_gate")
+  })
+
+  it("fail: reasoning step has only 1 content item", () => {
+    const rpp = makeRPP()
+    rpp.steps[1].content = ["Only one approach considered"]
+    const r = rppTradeoffGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "fail")
+    assert.match(r.reason, /fewer than 2 distinct/)
+  })
+
+  it("fail: reasoning step is missing", () => {
+    const rpp = makeRPP()
+    rpp.steps = rpp.steps.filter((s) => s.stage !== "reasoning")
+    const r = rppTradeoffGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "fail")
+    assert.match(r.reason, /reasoning step is missing/)
+  })
+
+  it("fallback to multiOptionGate when rpp is null (surface pattern used as last resort)", () => {
+    // Plain text with two option signals → fallback passes via surface check
+    const ctx: Omit<GateContext, "gate_id"> = {
+      llm_output: "1. First approach uses Redis. 2. Second approach uses Memcached.",
+      task_context: TASK_CTX,
+      execution_config: EXEC_CFG,
+      rpp: null,
+    }
+    const r = rppTradeoffGate(ctx as GateContext)
+    assert.equal(r.verdict, "pass")
+  })
+
+  it("runGates injects rpp into ctx — gate uses ctx.rpp not re-parse", () => {
+    const rpp = makeRPP()
+    // Pass pre-parsed rpp via runGates — rppTradeoffGate must use ctx.rpp
+    const result = runGates(
+      [rppTradeoffGate],
+      { llm_output: JSON.stringify(rpp), task_context: TASK_CTX, execution_config: EXEC_CFG }
+    )
+    assert.equal(result.verdict, "pass")
+  })
+})
+
+describe("rppRiskGate — structural references check", () => {
+  it("pass: decision step has a grounded reference (rule)", () => {
+    const rpp = makeRPP()
+    // s3 decision has { type: "rule", rule_id: "RUL-001", ... }
+    const r = rppRiskGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "pass")
+    assert.equal(r.gate_id, "rpp_risk_gate")
+  })
+
+  it("pass: action step has a grounded reference (evidence)", () => {
+    const rpp = makeRPP()
+    // Remove decision refs, keep action refs
+    rpp.steps[2].references = []
+    const r = rppRiskGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "pass")
+  })
+
+  it("fail: decision and action steps have no grounded references", () => {
+    const rpp = makeRPP()
+    rpp.steps[2].references = []  // clear decision refs
+    rpp.steps[3].references = []  // clear action refs
+    const r = rppRiskGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "fail")
+    assert.match(r.reason, /no grounded references/)
+  })
+
+  it("fail: only derived refs in decision/action (not grounded)", () => {
+    const rpp = makeRPP()
+    rpp.steps[2].references = [{ type: "derived", from_steps: ["s1"], supports: "x" } as never]
+    rpp.steps[3].references = [{ type: "derived", from_steps: ["s2"], supports: "y" } as never]
+    const r = rppRiskGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "fail")
+  })
+
+  it("fallback to designCompletenessGate when rpp is null", () => {
+    const ctx: Omit<GateContext, "gate_id"> = {
+      llm_output: "Consider the failure modes and rollback plan for this migration.",
+      task_context: TASK_CTX,
+      execution_config: EXEC_CFG,
+      rpp: null,
+    }
+    const r = rppRiskGate(ctx as GateContext)
+    assert.equal(r.verdict, "pass")
+  })
+})
+
+describe("rppIntentGate — structural interpretation check", () => {
+  it("pass: interpretation step is substantive", () => {
+    const rpp = makeRPP()
+    const r = rppIntentGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "pass")
+    assert.equal(r.gate_id, "rpp_intent_gate")
+  })
+
+  it("fail: interpretation step is trivial ('ok')", () => {
+    const rpp = makeRPP()
+    rpp.steps[0].content = ["ok"]
+    const r = rppIntentGate(makeCtxWithRPP(rpp) as GateContext)
+    assert.equal(r.verdict, "fail")
+    assert.match(r.reason, /trivial/)
+  })
+
+  it("pass when rpp is null (binding-validator handles structural errors)", () => {
+    const ctx: Omit<GateContext, "gate_id"> = {
+      llm_output: "not valid json",
+      task_context: TASK_CTX,
+      execution_config: EXEC_CFG,
+      rpp: null,
+    }
+    const r = rppIntentGate(ctx as GateContext)
+    assert.equal(r.verdict, "pass")
   })
 })

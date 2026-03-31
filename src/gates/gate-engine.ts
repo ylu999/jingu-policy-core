@@ -53,6 +53,13 @@ export interface GateContext {
   llm_output: string
   task_context: TaskContext
   execution_config: ExecutionConfig
+  /**
+   * Parsed RPPRecord, injected by runGates() before each gate runs.
+   * null if llm_output is not valid RPP JSON.
+   * Gates MUST check ctx.rpp first (STRUCTURE_OVER_SURFACE).
+   * Surface pattern fallback is only permitted when ctx.rpp is null.
+   */
+  rpp?: RPPRecord | null
 }
 
 export type Gate = (ctx: GateContext) => GateResult
@@ -76,10 +83,15 @@ export function runGates(
   if (gates == null) throw new Error("runGates: gates is required")
   if (ctx == null) throw new Error("runGates: ctx is required")
 
+  // Parse RPP once at the executor level — injected into every gate context.
+  // Gates check ctx.rpp first (STRUCTURE_OVER_SURFACE).
+  // Surface pattern fallback is only permitted when ctx.rpp is null.
+  const rpp = tryParseRPP(ctx.llm_output)
+
   const results: GateResult[] = []
 
   for (const gate of gates) {
-    const gateCtx: GateContext = { ...ctx, gate_id: "" }
+    const gateCtx: GateContext = { ...ctx, gate_id: "", rpp }
     // Run the gate — gate_id is set by the gate itself in its result
     const result = gate(gateCtx)
     results.push(result)
@@ -257,7 +269,8 @@ export const designCompletenessGate: Gate = (ctx) => {
 // just "I understand"). Falls through to pass if RPP parse fails — structural
 // validity is already checked by binding-validator.
 export const rppIntentGate: Gate = (ctx) => {
-  const rpp = tryParseRPP(ctx.llm_output)
+  // Use pre-parsed RPP from ctx (injected by runGates) — STRUCTURE_OVER_SURFACE
+  const rpp = ctx.rpp ?? null
   if (!rpp) {
     // RPP parse failed — binding-validator handles structural errors; pass here
     return { gate_id: "rpp_intent_gate", verdict: "pass", reason: "" }
@@ -283,12 +296,14 @@ export const rppIntentGate: Gate = (ctx) => {
 }
 
 // rpp_tradeoff_gate
-// Checks that the reasoning step content presents ≥2 distinct options.
-// Falls back to multi_option_gate keyword check if RPP parse fails.
+// Checks that the reasoning step content presents ≥2 distinct items.
+// Structural check: content is an array — each item is a distinct reasoning element.
+// Falls back to multi_option_gate keyword check if RPP parse fails (ctx.rpp is null).
 export const rppTradeoffGate: Gate = (ctx) => {
-  const rpp = tryParseRPP(ctx.llm_output)
+  // Use pre-parsed RPP from ctx (injected by runGates) — STRUCTURE_OVER_SURFACE
+  const rpp = ctx.rpp ?? null
   if (!rpp) {
-    // Fallback to keyword heuristic
+    // Surface fallback: RPP unavailable — documented temporary fallback only
     return multiOptionGate(ctx)
   }
   const step = getStepByStage(rpp, "reasoning")
@@ -299,51 +314,48 @@ export const rppTradeoffGate: Gate = (ctx) => {
       reason: "RPP reasoning step is missing. The proposer must analyze options.",
     }
   }
-  const contentText = step.content.join("\n").toLowerCase()
-  // Look for numbered/labeled option signals in the reasoning content
-  const optionSignals = [
-    /option\s*1/, /option\s*2/, /option\s*3/,
-    /approach\s*1/, /approach\s*2/,
-    /alternative\s*1/, /alternative\s*2/,
-    /\b1\.\s/, /\b2\.\s/,
-    /\bfirst[ly]?\b/, /\bsecond[ly]?\b/,
-    /\ba\)\s/, /\bb\)\s/,
-  ]
-  const matchCount = optionSignals.filter((re) => re.test(contentText)).length
-  if (matchCount >= 2) { // execution-leak-ignore
+  // Structural check: reasoning content array must have ≥2 non-empty distinct items.
+  // Each content[] entry represents a distinct reasoning element (P2: VERIFY_SEMANTICS_NOT_FORMAT).
+  const distinctItems = step.content.filter((c) => c.trim().length > 0)
+  if (distinctItems.length >= 2) { // execution-leak-ignore: minimum distinct reasoning items
     return { gate_id: "rpp_tradeoff_gate", verdict: "pass", reason: "" }
   }
   return {
     gate_id: "rpp_tradeoff_gate",
     verdict: "fail",
-    reason: "Reasoning step does not present multiple options or alternatives. Provide at least 2 distinct approaches with explicit tradeoffs.",
+    reason: "Reasoning step presents fewer than 2 distinct items. Provide at least 2 distinct approaches with explicit tradeoffs.",
   }
 }
 
 // rpp_risk_gate
-// Checks that the decision or action step content mentions risk/failure/mitigation.
-// Falls back to design_completeness_gate keyword check if RPP parse fails.
+// Checks that decision or action steps have grounded references (evidence/rule/method).
+// A step with grounded references has verifiable reasoning — not just surface assertions.
+// Falls back to design_completeness_gate keyword check if RPP parse fails (ctx.rpp is null).
 export const rppRiskGate: Gate = (ctx) => {
-  const rpp = tryParseRPP(ctx.llm_output)
+  // Use pre-parsed RPP from ctx (injected by runGates) — STRUCTURE_OVER_SURFACE
+  const rpp = ctx.rpp ?? null
   if (!rpp) {
-    // Fallback to keyword heuristic
+    // Surface fallback: RPP unavailable — documented temporary fallback only
     return designCompletenessGate(ctx)
   }
   const decisionStep = getStepByStage(rpp, "decision")
   const actionStep = getStepByStage(rpp, "action")
-  const combined = [
-    ...(decisionStep?.content ?? []),
-    ...(actionStep?.content ?? []),
-  ].join("\n").toLowerCase()
 
-  const riskMarkers = ["risk", "failure", "fail", "mitigat", "rollback", "fallback", "edge case", "contingency", "if it fails", "failure mode"]
-  if (riskMarkers.some((m) => combined.includes(m))) {
+  // Structural check: decision or action step must have ≥1 non-derived reference.
+  // A grounded reference (evidence/rule/method) indicates the reasoning is anchored
+  // to verifiable sources — not just self-asserted (P2: VERIFY_SEMANTICS_NOT_FORMAT).
+  const groundedRefTypes = new Set(["evidence", "rule", "method"])
+  const hasGroundedRef = [decisionStep, actionStep].some((step) =>
+    step?.references?.some((ref) => groundedRefTypes.has((ref as { type: string }).type))
+  )
+
+  if (hasGroundedRef) {
     return { gate_id: "rpp_risk_gate", verdict: "pass", reason: "" }
   }
   return {
     gate_id: "rpp_risk_gate",
     verdict: "fail",
-    reason: "Decision/action steps do not address failure modes or risks. Add at least one risk and mitigation.",
+    reason: "Decision/action steps have no grounded references (evidence/rule/method). Anchor your decision with at least one verifiable reference.",
   }
 }
 
