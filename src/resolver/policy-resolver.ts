@@ -84,7 +84,7 @@ const POLICY_PACKS: Record<TaskType, PolicyPack> = {
       "conclusions_must_cite_evidence",
       "must_include_why_not_for_rejected",
     ],
-    gates: ["multi_option_gate", "evidence_gate"],
+    gates: ["rpp_intent_gate", "rpp_tradeoff_gate", "evidence_gate"],
     reviewer_checks: ["counterexample_check"],
   },
   design: {
@@ -95,7 +95,7 @@ const POLICY_PACKS: Record<TaskType, PolicyPack> = {
       "must_include_rollout_plan",
       "must_include_risks",
     ],
-    gates: ["design_completeness_gate", "scope_gate"],
+    gates: ["design_completeness_gate", "rpp_risk_gate", "scope_gate"],
     reviewer_checks: ["design_review_check"],
   },
   execution: {

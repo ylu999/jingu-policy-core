@@ -421,7 +421,7 @@ describe("resolveGates", () => {
     assert.equal(gates.length, 0)
   })
 
-  it("GATE_REGISTRY contains all 7 gates", () => {
+  it("GATE_REGISTRY contains all 10 gates", () => {
     const expected = [
       "evidence_required_gate",
       "verify_gate",
@@ -430,11 +430,14 @@ describe("resolveGates", () => {
       "test_pass_gate",
       "multi_option_gate",
       "design_completeness_gate",
+      "rpp_intent_gate",
+      "rpp_tradeoff_gate",
+      "rpp_risk_gate",
     ]
     for (const id of expected) {
       assert.ok(GATE_REGISTRY[id] !== undefined, `GATE_REGISTRY missing: ${id}`)
     }
-    assert.equal(Object.keys(GATE_REGISTRY).length, 7)
+    assert.equal(Object.keys(GATE_REGISTRY).length, 10)
   })
 
   it("resolved gates produce correct gate_id in result", () => {
