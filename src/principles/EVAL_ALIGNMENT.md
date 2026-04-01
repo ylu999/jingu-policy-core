@@ -3,163 +3,151 @@
 **Canonical source for:** `.claude/rules/eval-alignment.md` (behavioral adapter)
 **Machine-checkable file:** `src/principles/eval-alignment.ts` (runtime checks)
 
-**Origin:** Extracted from SWE-bench incident — local import errors misclassified as patch
-failures because the evaluation environment (Docker) was not confirmed before building gates.
+**Origin:** SWE-bench incident — local import errors misclassified as patch failures because
+the Docker evaluation environment was not confirmed before building gates and optimizing prompts.
 
 ---
 
-## The Core Problem
+## Core Gate
 
-Systems that evaluate agents produce *signals*. Those signals are only meaningful when
-the evaluation environment matches the benchmark's intended execution model.
+```
+If you have not confirmed:
+  1. HOW the system runs
+  2. HOW success is evaluated
 
-When the environment is wrong:
-- A correct patch looks like a failure (false negative)
-- A broken gate looks like it works (false positive)
-- All "quality improvements" are noise
+You are not ready to modify or extend it.
+```
 
-Principle: **Align the evaluation boundary before building any quality signal.**
-
----
-
-## Eight Principles
-
-### EA1 — True Evaluation Boundary First
-
-Before any implementation, identify:
-- Which process executes the tests (local Python / Docker / CI / remote sandbox)
-- Who declares pass/fail (local pytest / harness / hidden evaluator)
-- Whether local passing equals official passing
-
-**Checkable invariant:** Any system that produces quality signals must declare its
-evaluation method. Undeclared evaluation method = EA1 violation.
+This is not documentation-compliance. It is a correctness precondition.
 
 ---
 
-### EA2 — No Default Run Pattern
+## System Mental Model Principles (SM1–SM5)
 
-Never assume `git clone → pip install → pytest` is correct for benchmarks.
-The canonical path may require:
-- Pre-built Docker images with compiled dependencies (`swebench/sweb.eval.x86_64.*`)
-- Conda environment activation (`conda activate testbed`)
-- Specific working directory (`/testbed`, not `.`)
-- Hidden evaluator running separately
+These are the conceptual layer. EA1–EA8 are the checkable operational invariants.
 
-**Checkable invariant:** If a system catches `ImportError` or `ModuleNotFoundError`
-to decide test quality, and the benchmark uses Docker images, this is EA2 violation.
+### SM1 — Identify the System, Don't Assume It
 
----
+Before using any system, answer:
+- What is its execution model? (Docker / local / CI / remote sandbox)
+- How is success defined? (test harness / hidden evaluator / apply gate)
+- Where does control live? (your process / framework / infra)
+- What is the canonical workflow?
 
-### EA3 — Evaluation Loop Before Agent Optimization
+Corollary: docs are one evidence source. Running the baseline is another.
+The mental model must match the actual system, not the documentation alone.
+
+### SM2 — New System ≠ Old Experience
+
+Every new system has its own execution contract. Familiar patterns are wrong priors.
+
+Example:
+- Wrong: `git clone → pip install → pytest`
+- Actual: `docker pull swebench/sweb.eval.x86_64.* → conda activate testbed → pytest in /testbed`
+
+The only way to know is to find the canonical example and run it.
+
+### SM3 — Evaluation Semantics Before Implementation
 
 Correct order:
-1. Run one official instance end-to-end
-2. Confirm evaluator produces meaningful signal
-3. Confirm output format matches evaluator input
-4. Only then optimize prompts, gates, retry logic
+1. Confirm what "passing" means in this system
+2. Run one instance end-to-end via the official path
+3. Confirm your output format matches the evaluator's input format
+4. Only then build quality signals, gates, and optimizations
 
-**Checkable invariant:** Agent quality metrics must not be reported before the
-evaluation loop is confirmed closed for at least one canonical instance.
+Optimizing before step 3 produces noise, not signal.
 
----
+### SM4 — Unexpected Result → System Check First
 
-### EA4 — Failure Layer Classification
+Failure classification order (must be applied in this sequence):
+1. Environment failure: deps missing, wrong container, wrong cwd, wrong Python
+2. Harness mismatch: different evaluator than official
+3. Observation failure: insufficient data to classify
+4. Task failure: the patch/implementation is genuinely wrong
 
-Every failure must be classified into one of:
-- `task_failure`: the patch is genuinely wrong
-- `environment_failure`: dependencies/container/cwd missing or wrong
-- `harness_mismatch`: running a different evaluator than official
-- `observation_failure`: insufficient data to classify
+Only after ruling out 1–3 is a result evidence of task quality.
 
-Only `task_failure` is evidence of agent quality. Others require environment fix first.
+### SM5 — Fallback ≠ Truth
 
-**Checkable invariant:** A result labeled `rejected` or `failed` must have a
-declared failure layer. Missing layer = unclassified failure = EA4 violation.
+A fallback (degraded gate, apply-gate-only, skip-test-gate) preserves system liveness.
+It cannot substitute for correct evaluation.
 
----
-
-### EA5 — Fallbacks Preserve Liveness, Not Truth
-
-A fallback (e.g., apply-gate-only, skip-test-gate) is permitted to:
-- Prevent system crash on environment failure
-- Mark result as uncertain
-- Allow run to continue
-
-A fallback is NOT permitted to:
-- Be used as the final quality verdict
-- Be mixed with confirmed-quality results in the same metric bucket
-- Replace the correct evaluation path permanently
-
-**Checkable invariant:** Results accepted via fallback gate must carry a distinct
-label (`accepted_apply_gate_only`, not `accepted`). Mixed labeling = EA5 violation.
+Rules:
+- Fallback results must be labeled as fallback
+- Fallback results must not be mixed with full-evaluation results in the same metric
+- A score reported without evaluation_method is semantically undefined
 
 ---
 
-### EA6 — Evaluation Semantics Must Be Declared
+## Eight Operational Principles (EA1–EA8)
 
-Any score, pass rate, or improvement metric must state:
-- Which evaluator was used (official harness / local pytest / apply gate)
-- Which instances were evaluated via fallback vs. full harness
-- Whether the score is comparable to the official leaderboard
+### EA1 — True Evaluation Boundary First (SM1)
+Identify: which process runs tests, in which environment, which evaluator declares pass/fail.
+Is local passing equivalent to official passing?
 
-**Checkable invariant:** A run summary that reports a pass count without an
-`evaluation_method` field is an EA6 violation.
+### EA2 — No Default Run Pattern (SM2)
+Never assume the familiar run pattern is correct. Find the canonical path first.
+
+### EA3 — Evaluation Loop Before Agent Optimization (SM3)
+Run one instance via the canonical path before building any quality signal.
+
+### EA4 — Failure Layer Classification (SM4)
+Every rejected result must declare its failure layer.
+Missing layer = unclassified failure = EA4 violation.
+
+**Failure layers:** `task_failure` | `environment_failure` | `harness_mismatch` | `observation_failure`
+
+### EA5 — Fallbacks Labeled, Not Promoted (SM5)
+`apply_gate_only` accepted results must carry `is_fallback: true`.
+Mixed labeling (fallback + full-eval in same bucket) = EA5 violation.
+
+### EA6 — Evaluation Method Declared
+Every result and every score report must state evaluation method.
+**Allowed values:** `official_harness` | `docker_pytest` | `local_pytest` | `apply_gate_only`
+
+### EA7 — Build System Mental Model Before Coding (SM1+SM2)
+Empirical before implementation: run the baseline, confirm the environment.
+10 minutes here prevents multi-day detours.
+
+### EA8 — Observation Gate Separate from Quality Gate (SM4)
+- **Observation gate**: can tests execute? (container available, imports work, test file exists)
+- **Quality gate**: do tests pass? (FAIL_TO_PASS now passes, no regression)
+
+Quality gate result is undefined when observation gate is unconfirmed.
+Combining them in one check = EA8 violation.
 
 ---
 
-### EA7 — Document Check Before Implementation
+## Machine-Checkable Invariants
 
-For any unfamiliar benchmark: read before coding.
+See `eval-alignment.ts` for runtime checks.
 
-Required reading order:
-1. README Quickstart
-2. README Evaluation section
-3. Baseline implementation (one working example)
-4. Known issues / FAQ
-5. Docker/environment setup
-
-**Checkable invariant (behavioral):** Cannot claim "aligned with official evaluation"
-without having read the benchmark's evaluation documentation. Enforced by plan doc
-`## Principles Check` requiring EA1–EA8 status.
-
----
-
-### EA8 — Separate Observation Gate from Quality Gate
-
-Two distinct gates, not one:
-
-**Observation gate:** Can the test runner execute in the correct environment?
-- Docker available
-- Correct conda environment activated
-- Import succeeds
-- Test file exists
-
-**Quality gate:** Did the patch fix the issue?
-- FAIL_TO_PASS tests now pass
-- No PASS_TO_PASS regressions
-
-If observation gate is undefined or failed, quality gate result is undefined.
-
-**Checkable invariant:** A quality gate must not fire when the observation gate
-has not been confirmed. Combined gate that handles both = EA8 violation.
+| Invariant Code | Principle | What it checks |
+|----------------|-----------|----------------|
+| `EVAL_MISSING_FAILURE_LAYER` | EA4 | rejected result has no failure_layer |
+| `EVAL_FALLBACK_UNLABELED` | EA5 | is_fallback:true but no fallback_reason |
+| `EVAL_FALLBACK_PROMOTED` | EA5 | apply_gate_only result not marked as fallback |
+| `EVAL_METHOD_UNDECLARED` | EA6 | no evaluation_method on result |
+| `EVAL_QUALITY_WITHOUT_OBSERVATION` | EA8 | quality gate fired without observation confirmation |
 
 ---
 
 ## Principles Check Table (for plan docs)
 
 ```markdown
-## Principles Check (EA1–EA8)
+## Principles Check (SM1–SM5 / EA1–EA8)
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| EA1 Evaluation boundary identified | pass/fail | |
-| EA2 No default run pattern assumed | pass/fail | |
-| EA3 Evaluation loop closed first | pass/fail | |
-| EA4 Failure layers classified | pass/fail | |
-| EA5 Fallbacks labeled, not promoted | pass/fail | |
-| EA6 Evaluation method declared | pass/fail | |
-| EA7 Docs read before coding | pass/fail | |
-| EA8 Observation gate separate from quality gate | pass/fail | |
+| SM1 System execution model identified | pass/fail | |
+| SM2 No default run pattern assumed | pass/fail | |
+| SM3 Evaluation loop confirmed closed | pass/fail | |
+| SM4 Failure layers classified | pass/fail | |
+| SM5 Fallbacks labeled, not promoted | pass/fail | |
+| EA4 failure_layer on all rejections | pass/fail | |
+| EA5 is_fallback on all degraded accepts | pass/fail | |
+| EA6 evaluation_method on all results | pass/fail | |
+| EA8 observation gate separate | pass/fail | |
 ```
 
 Any `fail` → stop and fix before proceeding.
@@ -170,5 +158,5 @@ Any `fail` → stop and fix before proceeding.
 
 - `SYSTEM_PRINCIPLES.md` P1 — enforcement: evaluation method must be structurally declared
 - `SYSTEM_PRINCIPLES.md` P6 — isolation: environment failures must be isolated from task failures
-- `EXECUTION_MODEL.md` EM7 — guard rails: evaluation loop must close before optimization begins
+- `EXECUTION_MODEL.md` EM7 — guard rails: evaluation loop must close before optimization
 - `CLOSURE.md` R5 — observable verification: all behavior verifiable from observable outputs
