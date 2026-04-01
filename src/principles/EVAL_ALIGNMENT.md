@@ -1,10 +1,14 @@
-# Evaluation Alignment — Principles for Benchmark and Agent Systems
+# Evaluation Alignment — Operational Checks for Benchmark and Agent Systems
 
-**Canonical source for:** `.claude/rules/system-mental-model.md` (behavioral adapter)
+**Broader principle:** `SYSTEM_MODEL.md` — system model derivation before any modification
+**Canonical behavioral adapter:** `.claude/rules/system-mental-model.md`
 **Machine-checkable file:** `src/principles/eval-alignment.ts` (runtime checks)
 
 **Origin:** SWE-bench incident — local import errors misclassified as patch failures because
 the Docker evaluation environment was not confirmed before building gates and optimizing prompts.
+
+This file defines **evaluation-specific operational checks (EA1–EA8)**.
+The root principle (SM1–SM5) is in `SYSTEM_MODEL.md`.
 
 ---
 
@@ -12,10 +16,12 @@ the Docker evaluation environment was not confirmed before building gates and op
 
 ```
 If you have not confirmed:
-  1. HOW the system runs
-  2. HOW success is evaluated
+  1. WHERE the system runs (confirmed, not assumed)
+  2. HOW success is defined (official evaluator, not proxy)
+  3. WHAT the canonical path is (from primary source)
 
 You are not ready to modify or extend it.
+Reading is not sufficient. You must derive the model.
 ```
 
 This is not documentation-compliance. It is a correctness precondition.
@@ -24,18 +30,17 @@ This is not documentation-compliance. It is a correctness precondition.
 
 ## System Mental Model Principles (SM1–SM5)
 
-These are the conceptual layer. EA1–EA8 are the checkable operational invariants.
+See `SYSTEM_MODEL.md` for canonical definitions. Summary:
 
-### SM1 — Identify the System, Don't Assume It
+### SM1 — Derive System Model from Primary Sources
 
-Before using any system, answer:
-- What is its execution model? (Docker / local / CI / remote sandbox)
-- How is success defined? (test harness / hidden evaluator / apply gate)
-- Where does control live? (your process / framework / infra)
-- What is the canonical workflow?
+Before touching any unfamiliar system:
+1. WHERE does it run? (confirmed from primary source)
+2. HOW is success defined? (authoritative evaluator)
+3. WHAT is the canonical path? (docs or working baseline)
 
-Corollary: docs are one evidence source. Running the baseline is another.
-The mental model must match the actual system, not the documentation alone.
+Reading ≠ deriving a model. You have a model when you can predict behavior, identify breakage,
+and explain why the official path exists — not just that it exists.
 
 ### SM2 — New System ≠ Old Experience
 

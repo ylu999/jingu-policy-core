@@ -46,7 +46,8 @@ export const InvariantCodes = {
   VALIDATOR_FORMAT_PROXY:         "VALIDATOR_FORMAT_PROXY",
   VALIDATOR_LENGTH_PROXY:         "VALIDATOR_LENGTH_PROXY",
   VALIDATOR_REGEX_ID_CHECK:       "VALIDATOR_REGEX_ID_CHECK",
-  // evaluation alignment principles (EA1-EA8)
+  // system model derivation principles (SM1-SM5) + evaluation alignment (EA1-EA8)
+  SYSTEM_MODEL_NOT_DERIVED:         "SYSTEM_MODEL_NOT_DERIVED",   // SM1: system touched before model confirmed
   EVAL_MISSING_FAILURE_LAYER:       "EVAL_MISSING_FAILURE_LAYER",
   EVAL_FALLBACK_UNLABELED:          "EVAL_FALLBACK_UNLABELED",
   EVAL_FALLBACK_PROMOTED:           "EVAL_FALLBACK_PROMOTED",
