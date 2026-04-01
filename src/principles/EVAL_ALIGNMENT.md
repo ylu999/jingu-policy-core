@@ -1,6 +1,6 @@
 # Evaluation Alignment — Principles for Benchmark and Agent Systems
 
-**Canonical source for:** `.claude/rules/eval-alignment.md` (behavioral adapter)
+**Canonical source for:** `.claude/rules/system-mental-model.md` (behavioral adapter)
 **Machine-checkable file:** `src/principles/eval-alignment.ts` (runtime checks)
 
 **Origin:** SWE-bench incident — local import errors misclassified as patch failures because

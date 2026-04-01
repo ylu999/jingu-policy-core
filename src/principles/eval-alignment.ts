@@ -1,5 +1,5 @@
 /**
- * Machine-checkable counterpart to .claude/rules/eval-alignment.md
+ * Machine-checkable counterpart to .claude/rules/system-mental-model.md
  *
  * Eight evaluation alignment principles:
  *   EA1 — True Evaluation Boundary First
