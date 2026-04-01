@@ -1,2 +1,3 @@
 export * from "./trace.js"
 export * from "./structure-over-surface.js"
+export * from "./eval-alignment.js"
