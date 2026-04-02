@@ -11,6 +11,7 @@ export type LoopEventType =
   | "reviewer_evaluated"
   | "retry_requested"
   | "final_verdict"
+  | "principle_evaluated"
 
 export interface LoopEventBase {
   event_id: string           // globally unique (crypto.randomUUID())
@@ -42,6 +43,7 @@ export type LoopEvent =
   | (LoopEventBase & { type: "reviewer_evaluated"; payload: ReviewerEvaluatedPayload })
   | (LoopEventBase & { type: "retry_requested"; payload: RetryRequestedPayload })
   | (LoopEventBase & { type: "final_verdict"; payload: FinalVerdictPayload })
+  | (LoopEventBase & { type: "principle_evaluated"; payload: PrincipleEvaluatedPayload })
 
 export interface EventSink {
   emit(event: LoopEvent): void
@@ -51,4 +53,12 @@ export interface EventSink {
 export const noopEventSink: EventSink = {
   emit(_event: LoopEvent): void {},
   flush(): Promise<void> { return Promise.resolve() },
+}
+
+// principle_evaluated — emitted after PEB gate runs (pass or fail)
+export interface PrincipleEvaluatedPayload {
+  claims_count: number
+  passed: number
+  failed: number
+  failures: Array<{ principle_id: string; code: string; reason: string }>
 }
