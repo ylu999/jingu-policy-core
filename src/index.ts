@@ -121,3 +121,4 @@ export * from "./invariants/index.js"
 export * from "./principles/index.js"
 
 export * from "./peb/index.js"
+export * from "./cognition/index.js"
