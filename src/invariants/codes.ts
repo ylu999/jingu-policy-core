@@ -53,6 +53,13 @@ export const InvariantCodes = {
   EVAL_FALLBACK_PROMOTED:           "EVAL_FALLBACK_PROMOTED",
   EVAL_METHOD_UNDECLARED:           "EVAL_METHOD_UNDECLARED",
   EVAL_QUALITY_WITHOUT_OBSERVATION: "EVAL_QUALITY_WITHOUT_OBSERVATION",
+  // runtime truth principles (RT1–RT8)
+  RT_IDENTITY_NOT_VERIFIED:              "RT_IDENTITY_NOT_VERIFIED",              // RT1: behavior analyzed without verifying image digest + commit
+  RT_UNTYPED_ABSENCE:                    "RT_UNTYPED_ABSENCE",                    // RT2: signal absence attributed to unclassified cause
+  RT_MODEL_BLAMED_BEFORE_WIRING_CLEARED: "RT_MODEL_BLAMED_BEFORE_WIRING_CLEARED", // RT3: model blamed without ruling out deployment/wiring
+  RT_MISSING_ACTIVATION_PROOF:           "RT_MISSING_ACTIVATION_PROOF",           // RT4: control-plane feature has no activation proof in logs
+  RT_BATCH_WITHOUT_SMOKE_TEST:           "RT_BATCH_WITHOUT_SMOKE_TEST",           // RT5: multi-instance batch launched without smoke test
+  RT_ARTIFACT_MISSING_PROVENANCE:        "RT_ARTIFACT_MISSING_PROVENANCE",        // RT6: run artifact missing image_digest/git_commit/build_timestamp
 } as const
 
 export type InvariantCode = typeof InvariantCodes[keyof typeof InvariantCodes]
