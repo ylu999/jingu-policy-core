@@ -12,6 +12,7 @@ export type LoopEventType =
   | "retry_requested"
   | "final_verdict"
   | "principle_evaluated"
+  | "cognition_evaluated"
 
 export interface LoopEventBase {
   event_id: string           // globally unique (crypto.randomUUID())
@@ -44,6 +45,7 @@ export type LoopEvent =
   | (LoopEventBase & { type: "retry_requested"; payload: RetryRequestedPayload })
   | (LoopEventBase & { type: "final_verdict"; payload: FinalVerdictPayload })
   | (LoopEventBase & { type: "principle_evaluated"; payload: PrincipleEvaluatedPayload })
+  | (LoopEventBase & { type: "cognition_evaluated"; payload: CognitionEvaluatedPayload })
 
 export interface EventSink {
   emit(event: LoopEvent): void
@@ -61,4 +63,13 @@ export interface PrincipleEvaluatedPayload {
   passed: number
   failed: number
   failures: Array<{ principle_id: string; code: string; reason: string }>
+}
+
+// cognition_evaluated — emitted after cognition gate runs (type-principal + declaration-patch)
+export interface CognitionEvaluatedPayload {
+  type: string
+  principals: string[]
+  patch_signals: string[]
+  valid: boolean
+  violations: Array<{ kind: string; reason: string }>
 }
