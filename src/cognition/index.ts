@@ -43,3 +43,13 @@ export {
   buildRetryHint,
   buildPipelineResult,
 } from "./validator-pipeline.js"
+
+// CDP v1 Failure Attribution (p173)
+export type { FailureAttribution, AttributionRule, FailureTrace } from "./types.js"
+export {
+  ATTRIBUTION_PRIORITY,
+  ATTRIBUTION_RULES,
+  attributeFailure,
+  selectPrimaryAttribution,
+  buildFailureTrace,
+} from "./failure-attribution.js"
