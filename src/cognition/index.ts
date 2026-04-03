@@ -53,3 +53,36 @@ export {
   selectPrimaryAttribution,
   buildFailureTrace,
 } from "./failure-attribution.js"
+
+// CDP v1 Cognitive Policy System — principals/ (p174)
+// Note: Principal from principals/ is exported as CognitivePrincipal to avoid
+// collision with Principal (12-atom type) from taxonomy.js
+export type {
+  PrincipalCategory,
+  PrincipalId,
+  Principal as CognitivePrincipal,
+  Evidence,
+  Claim,
+  Attribution as CognitionAttribution,
+  CognitionPhase,
+  CognitionDeclaration,
+  PrincipalValidatorError,
+  PrincipalValidationResult,
+  PrincipalViolation,
+} from "./principals/index.js"
+export {
+  PRINCIPALS,
+  ALL_PRINCIPAL_IDS,
+  getPrincipal,
+  getPrincipalsByCategory,
+  isValidPrincipalId,
+  PrincipalValidatorCode,
+  REQUIRED_PRINCIPALS_BY_TYPE,
+  validateEvidenceCoverage,
+  validateTypePrincipalBinding,
+  validateAttribution,
+  validateLayerOrder,
+  runPrincipalValidators,
+  PRINCIPAL_VIOLATION_RULES,
+  attributePrincipalViolation,
+} from "./principals/index.js"
