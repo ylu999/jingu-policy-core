@@ -14,3 +14,12 @@ export {
   isValidSubType,
   getTypeValidators,
 } from "./taxonomy.js"
+
+// CDP v1 Declaration Validator (p171)
+export type { DeclarationValidationResult, Declaration } from "./declaration-validator.js"
+export {
+  DeclError,
+  TYPE_TO_VALIDATORS,
+  validateDeclaration,
+  getTypeValidatorsForDecl,
+} from "./declaration-validator.js"
