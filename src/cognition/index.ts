@@ -23,3 +23,23 @@ export {
   validateDeclaration,
   getTypeValidatorsForDecl,
 } from "./declaration-validator.js"
+
+// CDP v1 Validator Pipeline (p172)
+export type {
+  ValidatorSeverity,
+  ValidationError,
+  ValidationResult,
+  ValidationContext,
+  Validator,
+  NormalizedDeclaration,
+  CDPValidationPipelineResult,
+} from "./validator-pipeline.js"
+export {
+  ValidationErrorCode,
+  PRINCIPAL_TO_VALIDATORS,
+  deriveValidatorsFromPrincipals,
+  deriveFinalValidators,
+  runValidation,
+  buildRetryHint,
+  buildPipelineResult,
+} from "./validator-pipeline.js"
