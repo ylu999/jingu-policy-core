@@ -1,9 +1,37 @@
+/**
+ * src/cognition/index.ts — CDP v1 public API barrel
+ *
+ * Naming boundary (two layers, two naming conventions):
+ *
+ *   CDP KERNEL LAYER (p166/p170–p173)
+ *     Declaration-level types: Principal (12-atom union), TypePolicy, ValidatorName
+ *     Validation: validateDeclaration, DeclError, TYPE_TO_VALIDATORS
+ *     Pipeline:   CDPValidationPipelineResult, runValidation, buildPipelineResult
+ *     Attribution: FailureAttribution, FailureTrace, buildFailureTrace
+ *
+ *   POLICY LAYER (p174)
+ *     Enriched principal objects: CognitivePrincipal (alias for principals/Principal)
+ *     Declaration schema:  CognitionDeclaration, CognitionAttribution
+ *     Validators: validateEvidenceCoverage, validateTypePrincipalBinding, etc.
+ *     Violation attribution: PrincipalViolation, attributePrincipalViolation
+ *
+ * Alias rationale:
+ *   - "Principal" (kernel) = string union of 12 CDP atom identifiers
+ *   - "CognitivePrincipal" (policy) = rich interface with description/evidence/violation fields
+ *   - "Attribution" (schema) = re-exported as "CognitionAttribution" to avoid collision
+ *     with p173 "FailureAttribution"
+ */
+
+// ── Pre-CDP type-principal policy (p166) ──────────────────────────────────────
 export type { PrincipalPolicy } from "./policy-table.js"
 export { TYPE_PRINCIPAL_POLICY } from "./policy-table.js"
 export type { TypePrincipalViolation, TypePrincipalResult } from "./validate-type-principal.js"
 export { validateTypePrincipal } from "./validate-type-principal.js"
 
-// CDP v1 taxonomy (p170)
+// ── CDP KERNEL LAYER ──────────────────────────────────────────────────────────
+
+// Taxonomy (p170): 9 types, 12 principal atoms, TypePolicy
+// "Principal" here = string union: "evidence_based" | "no_hallucination" | ...
 export type { Principal, TypePolicy, ValidatorName } from "./taxonomy.js"
 export {
   ALL_PRINCIPALS,
@@ -15,7 +43,7 @@ export {
   getTypeValidators,
 } from "./taxonomy.js"
 
-// CDP v1 Declaration Validator (p171)
+// Declaration Validator (p171): validateDeclaration, DeclError, TYPE_TO_VALIDATORS
 export type { DeclarationValidationResult, Declaration } from "./declaration-validator.js"
 export {
   DeclError,
@@ -24,7 +52,7 @@ export {
   getTypeValidatorsForDecl,
 } from "./declaration-validator.js"
 
-// CDP v1 Validator Pipeline (p172)
+// Validator Pipeline (p172): deriveFinalValidators, runValidation, CDPValidationPipelineResult
 export type {
   ValidatorSeverity,
   ValidationError,
@@ -44,7 +72,7 @@ export {
   buildPipelineResult,
 } from "./validator-pipeline.js"
 
-// CDP v1 Failure Attribution (p173)
+// Failure Attribution (p173): attributeFailure, buildFailureTrace, FailureTrace
 export type { FailureAttribution, AttributionRule, FailureTrace } from "./types.js"
 export {
   ATTRIBUTION_PRIORITY,
@@ -54,9 +82,13 @@ export {
   buildFailureTrace,
 } from "./failure-attribution.js"
 
-// CDP v1 Cognitive Policy System — principals/ (p174)
-// Note: Principal from principals/ is exported as CognitivePrincipal to avoid
-// collision with Principal (12-atom type) from taxonomy.js
+// ── POLICY LAYER ──────────────────────────────────────────────────────────────
+
+// Cognitive Policy System (p174): 17 principals, CognitionDeclaration, 4 validators
+//
+// Aliased exports to avoid naming collision with CDP kernel:
+//   Principal  (principals/taxonomy)  → CognitivePrincipal
+//   Attribution (principals/schema)   → CognitionAttribution
 export type {
   PrincipalCategory,
   PrincipalId,
