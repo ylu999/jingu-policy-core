@@ -1,11 +1,13 @@
 /**
- * validators.ts — CDP v1 Principal Validators (p174)
+ * validators.ts — CDP v1 Principal Validators (p174, p175)
  *
- * Four validators that operate on CognitionDeclaration:
+ * Five validators that operate on CognitionDeclaration:
  *   1. validateEvidenceCoverage — every claim must have supported_by.length > 0
  *   2. validateTypePrincipalBinding — required principals per type must be present
  *   3. validateAttribution — attribution must be backed by evidence
  *   4. validateLayerOrder — P_DEBUG_LAYER_ORDER requires ≥2 distinct layers in evidence
+ *   5. validateEnvironmentIndependence — P_DEBUG_ENV_INDEPENDENCE requires env validation evidence
+ *      (p175: grounded in CF-ENV-001)
  *
  * These are semantic checks on admitted declarations — they do NOT re-run declaration
  * validation (p171) and do NOT modify or attribute errors (p173).
@@ -21,6 +23,7 @@ export const PrincipalValidatorCode = {
   MISSING_REQUIRED_PRINCIPAL: "MISSING_REQUIRED_PRINCIPAL",
   UNSUPPORTED_ATTRIBUTION:    "UNSUPPORTED_ATTRIBUTION",
   INSUFFICIENT_LAYER_CHECK:   "INSUFFICIENT_LAYER_CHECK",
+  ENV_LEAKAGE_HARDCODE_PATH:  "ENV_LEAKAGE_HARDCODE_PATH",
 } as const
 
 export type PrincipalValidatorCode = typeof PrincipalValidatorCode[keyof typeof PrincipalValidatorCode]
@@ -177,9 +180,91 @@ export function validateLayerOrder(
   return { pass: true, errors: [] }
 }
 
+// ── Validator 5: validateEnvironmentIndependence ──────────────────────────────
+//
+// Only fires when P_DEBUG_ENV_INDEPENDENCE is in principals_used.
+// Evidence must include at least one item containing env validation keywords.
+// Grounded in CF-ENV-001: diagnosis stopped at symptom without checking environment.
+//
+// Violation signals: absolute paths (/root/, /home/, /Users/), assumed env vars
+// (HOME=, USER=, PATH=), tool assumptions (node_modules assumed present).
+
+const ENV_VALIDATION_KEYWORDS = [
+  "env check",
+  "environment check",
+  "smoke test",
+  "smoke_test",
+  "preflight",
+  "activation proof",
+  "env_validation",
+  "environment validation",
+  "verified on",
+  "confirmed on",
+  "tested on",
+]
+
+const LOCAL_PATH_PATTERNS = [
+  /\/root\//,
+  /\/home\//,
+  /\/Users\//,
+  /node_modules assumed/,
+  /HOME assumed/,
+  /PATH assumed/,
+]
+
+export function validateEnvironmentIndependence(
+  decl: CognitionDeclaration
+): PrincipalValidationResult {
+  if (!decl.principals_used.includes("P_DEBUG_ENV_INDEPENDENCE")) {
+    return { pass: true, errors: [] }
+  }
+
+  // Check: must have env validation evidence
+  const hasEnvValidation = decl.evidence.some(ev => {
+    const lower = ev.content.toLowerCase()
+    return ENV_VALIDATION_KEYWORDS.some(kw => lower.includes(kw))
+  })
+
+  if (!hasEnvValidation) {
+    return {
+      pass:   false,
+      errors: [{
+        code:    PrincipalValidatorCode.ENV_LEAKAGE_HARDCODE_PATH,
+        message: `P_DEBUG_ENV_INDEPENDENCE declared but no environment validation evidence found. ` +
+                 `Evidence must include env check, smoke test, preflight, or activation proof output. ` +
+                 `(CF-ENV-001: diagnosis must verify environment, not assume it)`,
+      }],
+    }
+  }
+
+  // Check: evidence must not contain local path leakage
+  const leakedPaths: string[] = []
+  for (const ev of decl.evidence) {
+    for (const pattern of LOCAL_PATH_PATTERNS) {
+      if (pattern.test(ev.content)) {
+        leakedPaths.push(ev.content.slice(0, 80))
+        break
+      }
+    }
+  }
+
+  if (leakedPaths.length > 0) {
+    return {
+      pass:   false,
+      errors: [{
+        code:    PrincipalValidatorCode.ENV_LEAKAGE_HARDCODE_PATH,
+        message: `P_DEBUG_ENV_INDEPENDENCE declared but evidence contains local path leakage: ` +
+                 `"${leakedPaths[0]}..." — hardcoded paths violate environment independence`,
+      }],
+    }
+  }
+
+  return { pass: true, errors: [] }
+}
+
 // ── runPrincipalValidators ────────────────────────────────────────────────────
 //
-// Convenience: runs all 4 validators and merges results.
+// Convenience: runs all 5 validators and merges results.
 
 export function runPrincipalValidators(
   decl: CognitionDeclaration
@@ -189,6 +274,7 @@ export function runPrincipalValidators(
     validateTypePrincipalBinding(decl),
     validateAttribution(decl),
     validateLayerOrder(decl),
+    validateEnvironmentIndependence(decl),
   ]
 
   const allErrors = results.flatMap(r => r.errors)

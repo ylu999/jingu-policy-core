@@ -1,8 +1,8 @@
 /**
- * taxonomy.ts — CDP v1 Principal Taxonomy (p174)
+ * taxonomy.ts — CDP v1 Principal Taxonomy (p174, p175)
  *
- * 17 principals across 3 categories:
- *   - Debugging (6)
+ * 18 principals across 3 categories:
+ *   - Debugging (7)  ← p175 adds P_DEBUG_ENV_INDEPENDENCE
  *   - Reasoning (5)
  *   - Design (6)
  *
@@ -21,6 +21,7 @@ export type PrincipalId =
   | "P_DEBUG_DETERMINISTIC_FIRST"
   | "P_DEBUG_OBSERVABILITY_GROUNDED"
   | "P_DEBUG_MINIMAL_CAUSE"
+  | "P_DEBUG_ENV_INDEPENDENCE"
   // Reasoning
   | "P_REASON_EVIDENCE_GROUNDED"
   | "P_REASON_NO_UNSUPPORTED_INFERENCE"
@@ -99,6 +100,14 @@ export const PRINCIPALS: Record<PrincipalId, Principal> = {
     whenToUse:        "When multiple explanations are possible",
     requiredEvidence: "Proposed explanation accounts for all observed symptoms",
     violation:        "Complex explanation chosen when a simpler one would fully account for symptoms",
+  },
+  P_DEBUG_ENV_INDEPENDENCE: {
+    id:               "P_DEBUG_ENV_INDEPENDENCE",
+    category:         "debugging",
+    description:      "Environment-dependency assumptions must be explicitly declared; never assume local development environment equals execution environment",
+    whenToUse:        "Any diagnosis or execution step that touches file paths, env vars, HOME/USER, installed tools, or runtime configuration",
+    requiredEvidence: "Environment validation evidence: env check output, smoke test pass, or explicit activation proof that confirms the assumption holds in the target environment",
+    violation:        "Hardcoded absolute paths, assumed env vars (HOME/USER/PATH), assumed tool installation, or local-path leakage without verification — grounded in CF-ENV-001: jingu-trust-gate/node_modules assumed present without preflight check",
   },
 
   // ── Reasoning (5) ──────────────────────────────────────────────────────────

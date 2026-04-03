@@ -17,7 +17,7 @@ export type {
   CognitionDeclaration,
 } from "./schema.js"
 
-// CDP v1 Principal Validators (p174)
+// CDP v1 Principal Validators (p174, p175)
 export type { PrincipalValidatorError, PrincipalValidationResult } from "./validators.js"
 export {
   PrincipalValidatorCode,
@@ -26,6 +26,7 @@ export {
   validateTypePrincipalBinding,
   validateAttribution,
   validateLayerOrder,
+  validateEnvironmentIndependence,
   runPrincipalValidators,
 } from "./validators.js"
 

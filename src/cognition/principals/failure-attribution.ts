@@ -53,6 +53,13 @@ export const PRINCIPAL_VIOLATION_RULES: PrincipalViolationRule[] = [
     confidence:     "medium",
     reasonTemplate: "Layer coverage insufficient — P_DEBUG_LAYER_ORDER requires ≥2 distinct layers",
   },
+  {
+    // p175: grounded in CF-ENV-001 (jingu-swebench node_modules not pre-installed)
+    errorCode:      PVC.ENV_LEAKAGE_HARDCODE_PATH,
+    principal:      "P_DEBUG_ENV_INDEPENDENCE",
+    confidence:     "high",
+    reasonTemplate: "Diagnosis stopped at symptom (module not found / path error) without tracing to root cause (environment assumption violation) — P_DEBUG_ENV_INDEPENDENCE requires explicit env validation evidence",
+  },
 ]
 
 // ── attributePrincipalViolation ───────────────────────────────────────────────

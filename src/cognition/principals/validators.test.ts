@@ -5,6 +5,7 @@ import {
   validateTypePrincipalBinding,
   validateAttribution,
   validateLayerOrder,
+  validateEnvironmentIndependence,
   runPrincipalValidators,
   PrincipalValidatorCode,
 } from "./validators.js"
@@ -184,6 +185,106 @@ describe("validateLayerOrder", () => {
       evidence:        [],
     }))
     assert.strictEqual(result.pass, false)
+  })
+})
+
+// ── validateEnvironmentIndependence (p175 / CF-ENV-001) ───────────────────────
+
+describe("validateEnvironmentIndependence", () => {
+  it("P_DEBUG_ENV_INDEPENDENCE not declared → passes regardless", () => {
+    const result = validateEnvironmentIndependence(makeDecl({
+      principals_used: ["P_DEBUG_ROOT_CAUSE_ISOLATION"],
+      evidence:        [],
+    }))
+    assert.strictEqual(result.pass, true)
+  })
+
+  it("CF-ENV-001: diagnosis declaration missing P_DEBUG_ENV_INDEPENDENCE → passes (opt-in)", () => {
+    // Opt-in gate: validator only fires when principal is declared.
+    // A diagnosis that does NOT declare P_DEBUG_ENV_INDEPENDENCE is not checked here.
+    const result = validateEnvironmentIndependence(makeDecl({
+      phase:           "ANALYZE",
+      type:            "debugging",
+      principals_used: ["P_DEBUG_ROOT_CAUSE_ISOLATION"],
+      evidence:        [{ type: "runtime", content: "ModuleNotFoundError: jingu-protocol" }],
+      claims:          [{ statement: "Module missing", supported_by: [0] }],
+    }))
+    assert.strictEqual(result.pass, true)
+  })
+
+  it("CF-ENV-001: diagnosis with P_DEBUG_ENV_INDEPENDENCE but no env validation evidence → ENV_LEAKAGE_HARDCODE_PATH", () => {
+    // This is the CF-ENV-001 failure: declared the principal but evidence only
+    // shows the symptom (module not found), not environment validation.
+    const result = validateEnvironmentIndependence(makeDecl({
+      phase:           "ANALYZE",
+      type:            "debugging",
+      principals_used: ["P_DEBUG_ENV_INDEPENDENCE", "P_DEBUG_ROOT_CAUSE_ISOLATION", "P_DEBUG_VERIFY_BEFORE_ATTRIBUTION"],
+      evidence:        [
+        { type: "runtime", content: "ModuleNotFoundError: Cannot find module jingu-protocol" },
+        { type: "code",    content: "gate_runner.js imports jingu-protocol" },
+      ],
+      claims:          [
+        { statement: "jingu-protocol module is missing", supported_by: [0, 1] },
+      ],
+    }))
+    assert.strictEqual(result.pass, false)
+    assert.strictEqual(result.errors.length, 1)
+    assert.strictEqual(result.errors[0].code, PrincipalValidatorCode.ENV_LEAKAGE_HARDCODE_PATH)
+    assert.ok(result.errors[0].message.includes("environment validation"))
+  })
+
+  it("CF-ENV-001 fixed: P_DEBUG_ENV_INDEPENDENCE + env validation evidence → passes", () => {
+    // Correct declaration: declared the principal AND provided env validation proof.
+    const result = validateEnvironmentIndependence(makeDecl({
+      phase:           "ANALYZE",
+      type:            "debugging",
+      principals_used: ["P_DEBUG_ENV_INDEPENDENCE", "P_DEBUG_ROOT_CAUSE_ISOLATION", "P_DEBUG_VERIFY_BEFORE_ATTRIBUTION"],
+      evidence:        [
+        { type: "runtime", content: "ModuleNotFoundError: Cannot find module jingu-protocol" },
+        { type: "code",    content: "gate_runner.js imports jingu-protocol" },
+        { type: "runtime", content: "preflight check: node_modules directory missing on EC2 runner — npm install required" },
+      ],
+      claims:          [
+        { statement: "jingu-protocol module missing because node_modules not pre-installed on runner", supported_by: [0, 1, 2] },
+      ],
+    }))
+    assert.strictEqual(result.pass, true)
+    assert.strictEqual(result.errors.length, 0)
+  })
+
+  it("smoke test evidence keyword → passes", () => {
+    const result = validateEnvironmentIndependence(makeDecl({
+      principals_used: ["P_DEBUG_ENV_INDEPENDENCE"],
+      evidence:        [
+        { type: "runtime", content: "smoke test passed: gate_runner.js executed successfully on runner" },
+      ],
+      claims: [{ statement: "env is valid", supported_by: [0] }],
+    }))
+    assert.strictEqual(result.pass, true)
+  })
+
+  it("local path leakage in evidence → ENV_LEAKAGE_HARDCODE_PATH even with env check keyword", () => {
+    const result = validateEnvironmentIndependence(makeDecl({
+      principals_used: ["P_DEBUG_ENV_INDEPENDENCE"],
+      evidence:        [
+        { type: "code",    content: "env check: /root/jingu-swebench/jingu-trust-gate/node_modules" },
+      ],
+      claims: [{ statement: "path hardcoded", supported_by: [0] }],
+    }))
+    assert.strictEqual(result.pass, false)
+    assert.strictEqual(result.errors[0].code, PrincipalValidatorCode.ENV_LEAKAGE_HARDCODE_PATH)
+    assert.ok(result.errors[0].message.includes("local path leakage"))
+  })
+
+  it("activation proof keyword → passes", () => {
+    const result = validateEnvironmentIndependence(makeDecl({
+      principals_used: ["P_DEBUG_ENV_INDEPENDENCE"],
+      evidence:        [
+        { type: "runtime", content: "activation proof: GATE_OK received, jingu-protocol loaded successfully" },
+      ],
+      claims: [{ statement: "gate active", supported_by: [0] }],
+    }))
+    assert.strictEqual(result.pass, true)
   })
 })
 
