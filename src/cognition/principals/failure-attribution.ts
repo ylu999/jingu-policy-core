@@ -60,6 +60,13 @@ export const PRINCIPAL_VIOLATION_RULES: PrincipalViolationRule[] = [
     confidence:     "high",
     reasonTemplate: "Diagnosis stopped at symptom (module not found / path error) without tracing to root cause (environment assumption violation) — P_DEBUG_ENV_INDEPENDENCE requires explicit env validation evidence",
   },
+  {
+    // p176: planning declaration missing feedback loop evidence
+    errorCode:      PVC.PLAN_NO_FEEDBACK_LOOP,
+    principal:      "P_PLAN_CLOSE_THE_LOOP",
+    confidence:     "high",
+    reasonTemplate: "Planning step declared P_PLAN_CLOSE_THE_LOOP but provided no evidence of a verifiable feedback loop — every plan action must have an observable outcome",
+  },
 ]
 
 // ── attributePrincipalViolation ───────────────────────────────────────────────

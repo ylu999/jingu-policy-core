@@ -1,17 +1,18 @@
 /**
- * taxonomy.ts — CDP v1 Principal Taxonomy (p174, p175)
+ * taxonomy.ts — CDP v1 Principal Taxonomy (p174, p175, p176)
  *
- * 18 principals across 3 categories:
+ * 24 principals across 4 categories:
  *   - Debugging (7)  ← p175 adds P_DEBUG_ENV_INDEPENDENCE
  *   - Reasoning (5)
  *   - Design (6)
+ *   - Planning (6)   ← p176 adds planning-specific principals
  *
  * Each principal declares: id, category, description, whenToUse, requiredEvidence, violation.
  */
 
 // ── PrincipalId ───────────────────────────────────────────────────────────────
 
-export type PrincipalCategory = "debugging" | "reasoning" | "design"
+export type PrincipalCategory = "debugging" | "reasoning" | "design" | "planning"
 
 export type PrincipalId =
   // Debugging
@@ -35,6 +36,13 @@ export type PrincipalId =
   | "P_DESIGN_RISK_AWARE"
   | "P_DESIGN_TRACEABLE"
   | "P_DESIGN_ORTHOGONAL"
+  // Planning
+  | "P_PLAN_STAGE_APPROPRIATE_OPT"
+  | "P_PLAN_BOTTLENECK_FIRST"
+  | "P_PLAN_CLOSE_THE_LOOP"
+  | "P_PLAN_PROVEN_VALUE_AMP"
+  | "P_PLAN_SEPARATION_OF_CONCERNS"
+  | "P_PLAN_COST_AWARE_SEQUENCING"
 
 // ── Principal definition ──────────────────────────────────────────────────────
 
@@ -202,6 +210,57 @@ export const PRINCIPALS: Record<PrincipalId, Principal> = {
     whenToUse:        "Design steps introducing new components or abstractions",
     requiredEvidence: "Overlap analysis present — confirms new component does not duplicate existing",
     violation:        "New component introduced without checking for functional overlap with existing",
+  },
+
+  // ── Planning (6) ────────────────────────────────────────────────────────────
+
+  P_PLAN_STAGE_APPROPRIATE_OPT: {
+    id:               "P_PLAN_STAGE_APPROPRIATE_OPT",
+    category:         "planning",
+    description:      "Optimize only what is relevant to the current stage — do not prematurely optimize metrics that belong to later stages",
+    whenToUse:        "Planning steps that include optimization or tuning decisions",
+    requiredEvidence: "Plan explicitly names which stage the optimization targets and why it is appropriate now",
+    violation:        "Plan optimizes a metric that is only meaningful in a later stage (e.g., optimizing eval score before the eval loop is closed)",
+  },
+  P_PLAN_BOTTLENECK_FIRST: {
+    id:               "P_PLAN_BOTTLENECK_FIRST",
+    category:         "planning",
+    description:      "Address the constraint that limits overall progress before working on non-critical paths",
+    whenToUse:        "Planning steps that sequence multiple workstreams or tasks",
+    requiredEvidence: "Plan identifies the current bottleneck and places it first in execution order",
+    violation:        "Plan works on a non-bottleneck component while the actual bottleneck is left unaddressed",
+  },
+  P_PLAN_CLOSE_THE_LOOP: {
+    id:               "P_PLAN_CLOSE_THE_LOOP",
+    category:         "planning",
+    description:      "Every planning decision must have a verifiable feedback loop — do not plan actions whose outcomes cannot be observed",
+    whenToUse:        "All planning steps, especially those proposing experiments or iterative processes",
+    requiredEvidence: "Plan names a concrete verification step or observable outcome for each major action",
+    violation:        "Plan proposes an action with no stated way to determine whether it succeeded",
+  },
+  P_PLAN_PROVEN_VALUE_AMP: {
+    id:               "P_PLAN_PROVEN_VALUE_AMP",
+    category:         "planning",
+    description:      "Invest more in directions that have demonstrated value; do not allocate effort to unvalidated directions in parallel",
+    whenToUse:        "Planning steps that decide resource or effort allocation across multiple options",
+    requiredEvidence: "Plan cites prior evidence of value (e.g., prior win rate, experiment result) for the chosen direction",
+    violation:        "Plan allocates equal effort to validated and unvalidated directions with no evidence-based differentiation",
+  },
+  P_PLAN_SEPARATION_OF_CONCERNS: {
+    id:               "P_PLAN_SEPARATION_OF_CONCERNS",
+    category:         "planning",
+    description:      "Different concerns (exploration vs exploitation, data vs model, training vs eval) must be clearly separated in the plan",
+    whenToUse:        "Plans that mix distinct phases or concerns in a single step or timeline",
+    requiredEvidence: "Plan explicitly separates concerns into distinct steps or workstreams with clear boundaries",
+    violation:        "Plan mixes concerns in a single step, making it impossible to attribute an outcome to a specific concern",
+  },
+  P_PLAN_COST_AWARE_SEQUENCING: {
+    id:               "P_PLAN_COST_AWARE_SEQUENCING",
+    category:         "planning",
+    description:      "High-cost steps must be sequenced after sufficient signal has been gathered to justify them",
+    whenToUse:        "Planning steps that include expensive operations (large-scale experiments, infra changes, model training)",
+    requiredEvidence: "Plan shows that lower-cost validation steps precede high-cost execution steps",
+    violation:        "Plan places a high-cost step before the signal that would justify it has been obtained",
   },
 }
 

@@ -6,6 +6,7 @@ import {
   validateAttribution,
   validateLayerOrder,
   validateEnvironmentIndependence,
+  validatePlanningLoop,
   runPrincipalValidators,
   PrincipalValidatorCode,
 } from "./validators.js"
@@ -285,6 +286,88 @@ describe("validateEnvironmentIndependence", () => {
       claims: [{ statement: "gate active", supported_by: [0] }],
     }))
     assert.strictEqual(result.pass, true)
+  })
+})
+
+// ── validatePlanningLoop (p176) ───────────────────────────────────────────────
+
+describe("validatePlanningLoop", () => {
+  it("P_PLAN_CLOSE_THE_LOOP not declared → passes regardless", () => {
+    const result = validatePlanningLoop(makeDecl({
+      principals_used: ["P_DEBUG_ROOT_CAUSE_ISOLATION"],
+      evidence:        [],
+    }))
+    assert.strictEqual(result.pass, true)
+  })
+
+  it("P_PLAN_CLOSE_THE_LOOP declared with no evidence → PLAN_NO_FEEDBACK_LOOP", () => {
+    const result = validatePlanningLoop(makeDecl({
+      phase:           "PLAN",
+      type:            "planning",
+      principals_used: ["P_PLAN_CLOSE_THE_LOOP", "P_PLAN_BOTTLENECK_FIRST"],
+      evidence:        [],
+      claims:          [{ statement: "We will improve quality", supported_by: [] }],
+    }))
+    assert.strictEqual(result.pass, false)
+    assert.strictEqual(result.errors[0].code, PrincipalValidatorCode.PLAN_NO_FEEDBACK_LOOP)
+  })
+
+  it("P_PLAN_CLOSE_THE_LOOP declared but evidence has no feedback keywords → PLAN_NO_FEEDBACK_LOOP", () => {
+    const result = validatePlanningLoop(makeDecl({
+      phase:           "PLAN",
+      type:            "planning",
+      principals_used: ["P_PLAN_CLOSE_THE_LOOP"],
+      evidence:        [
+        { type: "doc", content: "strategy: improve the system architecture" },
+        { type: "doc", content: "focus on bottleneck reduction" },
+      ],
+      claims: [{ statement: "architecture improvement", supported_by: [0] }],
+    }))
+    assert.strictEqual(result.pass, false)
+    assert.strictEqual(result.errors[0].code, PrincipalValidatorCode.PLAN_NO_FEEDBACK_LOOP)
+  })
+
+  it("P_PLAN_CLOSE_THE_LOOP with verification evidence → passes", () => {
+    const result = validatePlanningLoop(makeDecl({
+      phase:           "PLAN",
+      type:            "planning",
+      principals_used: ["P_PLAN_CLOSE_THE_LOOP", "P_PLAN_BOTTLENECK_FIRST"],
+      evidence:        [
+        { type: "doc",     content: "bottleneck: retry controller not implemented" },
+        { type: "runtime", content: "verification: run pytest tests/test_retry_controller.py and confirm all pass" },
+      ],
+      claims: [
+        { statement: "RetryController will be verified by test suite", supported_by: [0, 1] },
+      ],
+    }))
+    assert.strictEqual(result.pass, true)
+    assert.strictEqual(result.errors.length, 0)
+  })
+
+  it("planning type with required principals present → validateTypePrincipalBinding passes", () => {
+    const result = validateTypePrincipalBinding(makeDecl({
+      type:            "planning",
+      principals_used: ["P_PLAN_CLOSE_THE_LOOP", "P_PLAN_BOTTLENECK_FIRST"],
+    }))
+    assert.strictEqual(result.pass, true)
+  })
+
+  it("planning type missing P_PLAN_BOTTLENECK_FIRST → MISSING_REQUIRED_PRINCIPAL", () => {
+    const result = validateTypePrincipalBinding(makeDecl({
+      type:            "planning",
+      principals_used: ["P_PLAN_CLOSE_THE_LOOP"],
+    }))
+    assert.strictEqual(result.pass, false)
+    assert.strictEqual(result.errors[0].code, PrincipalValidatorCode.MISSING_REQUIRED_PRINCIPAL)
+    assert.ok(result.errors[0].message.includes("P_PLAN_BOTTLENECK_FIRST"))
+  })
+
+  it("planning type missing both required → 2 MISSING_REQUIRED_PRINCIPAL errors", () => {
+    const result = validateTypePrincipalBinding(makeDecl({
+      type:            "planning",
+      principals_used: ["P_PLAN_SEPARATION_OF_CONCERNS"],
+    }))
+    assert.strictEqual(result.errors.length, 2)
   })
 })
 

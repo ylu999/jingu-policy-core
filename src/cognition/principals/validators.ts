@@ -1,13 +1,15 @@
 /**
- * validators.ts — CDP v1 Principal Validators (p174, p175)
+ * validators.ts — CDP v1 Principal Validators (p174, p175, p176)
  *
- * Five validators that operate on CognitionDeclaration:
+ * Six validators that operate on CognitionDeclaration:
  *   1. validateEvidenceCoverage — every claim must have supported_by.length > 0
  *   2. validateTypePrincipalBinding — required principals per type must be present
  *   3. validateAttribution — attribution must be backed by evidence
  *   4. validateLayerOrder — P_DEBUG_LAYER_ORDER requires ≥2 distinct layers in evidence
  *   5. validateEnvironmentIndependence — P_DEBUG_ENV_INDEPENDENCE requires env validation evidence
  *      (p175: grounded in CF-ENV-001)
+ *   6. validatePlanningLoop — P_PLAN_CLOSE_THE_LOOP requires at least one verifiable outcome
+ *      per claim (p176)
  *
  * These are semantic checks on admitted declarations — they do NOT re-run declaration
  * validation (p171) and do NOT modify or attribute errors (p173).
@@ -24,6 +26,7 @@ export const PrincipalValidatorCode = {
   UNSUPPORTED_ATTRIBUTION:    "UNSUPPORTED_ATTRIBUTION",
   INSUFFICIENT_LAYER_CHECK:   "INSUFFICIENT_LAYER_CHECK",
   ENV_LEAKAGE_HARDCODE_PATH:  "ENV_LEAKAGE_HARDCODE_PATH",
+  PLAN_NO_FEEDBACK_LOOP:      "PLAN_NO_FEEDBACK_LOOP",
 } as const
 
 export type PrincipalValidatorCode = typeof PrincipalValidatorCode[keyof typeof PrincipalValidatorCode]
@@ -57,6 +60,10 @@ export const REQUIRED_PRINCIPALS_BY_TYPE: Record<string, PrincipalId[]> = {
   design: [
     "P_DESIGN_VERIFY_BEFORE_COMMIT",
     "P_DESIGN_CONSTRAINT_AWARE",
+  ],
+  planning: [
+    "P_PLAN_CLOSE_THE_LOOP",
+    "P_PLAN_BOTTLENECK_FIRST",
   ],
 }
 
@@ -262,9 +269,63 @@ export function validateEnvironmentIndependence(
   return { pass: true, errors: [] }
 }
 
+// ── Validator 6: validatePlanningLoop ─────────────────────────────────────────
+//
+// Only fires when P_PLAN_CLOSE_THE_LOOP is in principals_used.
+// At least one claim must have verifiable outcome language — evidence that names
+// a concrete observable result, check, or verification step.
+// Semantic boundary: checks for presence of feedback-loop language in claims,
+// not whether the loop will actually close.
+
+const FEEDBACK_LOOP_KEYWORDS = [
+  "verify",
+  "verified",
+  "check",
+  "checks",
+  "test",
+  "tests",
+  "observe",
+  "observed",
+  "measure",
+  "measured",
+  "confirm",
+  "confirmed",
+  "run",
+  "result",
+  "output",
+  "pass",
+  "fail",
+]
+
+export function validatePlanningLoop(
+  decl: CognitionDeclaration
+): PrincipalValidationResult {
+  if (!decl.principals_used.includes("P_PLAN_CLOSE_THE_LOOP")) {
+    return { pass: true, errors: [] }
+  }
+
+  const hasFeedbackEvidence = decl.evidence.some(ev => {
+    const lower = ev.content.toLowerCase()
+    return FEEDBACK_LOOP_KEYWORDS.some(kw => lower.includes(kw))
+  })
+
+  if (!hasFeedbackEvidence) {
+    return {
+      pass:   false,
+      errors: [{
+        code:    PrincipalValidatorCode.PLAN_NO_FEEDBACK_LOOP,
+        message: `P_PLAN_CLOSE_THE_LOOP declared but no verifiable feedback loop found in evidence. ` +
+                 `Evidence must describe a concrete observable outcome (test, check, verify, measure, result).`,
+      }],
+    }
+  }
+
+  return { pass: true, errors: [] }
+}
+
 // ── runPrincipalValidators ────────────────────────────────────────────────────
 //
-// Convenience: runs all 5 validators and merges results.
+// Convenience: runs all 6 validators and merges results.
 
 export function runPrincipalValidators(
   decl: CognitionDeclaration
@@ -275,6 +336,7 @@ export function runPrincipalValidators(
     validateAttribution(decl),
     validateLayerOrder(decl),
     validateEnvironmentIndependence(decl),
+    validatePlanningLoop(decl),
   ]
 
   const allErrors = results.flatMap(r => r.errors)
