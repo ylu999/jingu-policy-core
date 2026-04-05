@@ -60,6 +60,11 @@ export const InvariantCodes = {
   RT_MISSING_ACTIVATION_PROOF:           "RT_MISSING_ACTIVATION_PROOF",           // RT4: control-plane feature has no activation proof in logs
   RT_BATCH_WITHOUT_SMOKE_TEST:           "RT_BATCH_WITHOUT_SMOKE_TEST",           // RT5: multi-instance batch launched without smoke test
   RT_ARTIFACT_MISSING_PROVENANCE:        "RT_ARTIFACT_MISSING_PROVENANCE",        // RT6: run artifact missing image_digest/git_commit/build_timestamp
+  // single source of truth principles (SST1–SST3)
+  SST_DUPLICATE_DEFINITION:       "SST_DUPLICATE_DEFINITION",       // SST1: controlled vocabulary defined in more than one authoritative location
+  SST_CONSUMER_REDECLARES:        "SST_CONSUMER_REDECLARES",        // SST2: consumer hardcodes a value instead of calling accessor
+  SST_STALE_FALLBACK:             "SST_STALE_FALLBACK",             // SST2: except/fallback block returns a copy of the definition instead of ""
+  SST_NO_AUTHORITATIVE_SOURCE:    "SST_NO_AUTHORITATIVE_SOURCE",    // SST1: vocabulary used in multiple places with no single owner file
 } as const
 
 export type InvariantCode = typeof InvariantCodes[keyof typeof InvariantCodes]

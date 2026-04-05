@@ -22,7 +22,8 @@
     "test:src": "npx tsc --noEmit",
     "demo:resolver": "npm run build && node dist/demo/policy-resolver-demo.js",
     "demo:brief": "npm run build && node dist/demo/brief-builder-demo.js",
-    "demo:gates": "npm run build && node dist/demo/gate-engine-demo.js"
+    "demo:gates": "npm run build && node dist/demo/gate-engine-demo.js",
+    "check:single-source": "node scripts/check-single-source.mjs"
   },
   "dependencies": {
     "jingu-protocol": "file:../jingu-protocol"
