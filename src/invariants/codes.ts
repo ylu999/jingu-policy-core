@@ -65,6 +65,11 @@ export const InvariantCodes = {
   SST_CONSUMER_REDECLARES:        "SST_CONSUMER_REDECLARES",        // SST2: consumer hardcodes a value instead of calling accessor
   SST_STALE_FALLBACK:             "SST_STALE_FALLBACK",             // SST2: except/fallback block returns a copy of the definition instead of ""
   SST_NO_AUTHORITATIVE_SOURCE:    "SST_NO_AUTHORITATIVE_SOURCE",    // SST1: vocabulary used in multiple places with no single owner file
+  // cognition consistency principles (CC1–CC5)
+  CC_SUBTYPE_UNKNOWN:             "CC_SUBTYPE_UNKNOWN",             // CC1+CC4: phase_record.subtype="unknown" — phase name not canonical or not in map
+  CC_FAKE_CHECK_ON_UNEVALUATED:   "CC_FAKE_CHECK_ON_UNEVALUATED",   // CC2: principal flagged fake when its inference rule didn't run (applies_to mismatch)
+  CC_ORPHAN_CONTRACT:             "CC_ORPHAN_CONTRACT",             // CC3: required_principal has no matching inference rule and no lifecycle protection
+  CC_INFERENCE_OPACITY:           "CC_INFERENCE_OPACITY",           // CC5: declared-but-not-inferred principal has no skip_reason logged
 } as const
 
 export type InvariantCode = typeof InvariantCodes[keyof typeof InvariantCodes]
