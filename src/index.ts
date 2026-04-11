@@ -122,3 +122,4 @@ export * from "./principles/index.js"
 
 export * from "./peb/index.js"
 export * from "./cognition/index.js"
+export * from "./trace/index.js"
