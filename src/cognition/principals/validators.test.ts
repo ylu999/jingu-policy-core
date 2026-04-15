@@ -302,7 +302,7 @@ describe("validatePlanningLoop", () => {
 
   it("P_PLAN_CLOSE_THE_LOOP declared with no evidence → PLAN_NO_FEEDBACK_LOOP", () => {
     const result = validatePlanningLoop(makeDecl({
-      phase:           "PLAN",
+      phase:           "DESIGN",
       type:            "planning",
       principals_used: ["P_PLAN_CLOSE_THE_LOOP", "P_PLAN_BOTTLENECK_FIRST"],
       evidence:        [],
@@ -314,7 +314,7 @@ describe("validatePlanningLoop", () => {
 
   it("P_PLAN_CLOSE_THE_LOOP declared but evidence has no feedback keywords → PLAN_NO_FEEDBACK_LOOP", () => {
     const result = validatePlanningLoop(makeDecl({
-      phase:           "PLAN",
+      phase:           "DESIGN",
       type:            "planning",
       principals_used: ["P_PLAN_CLOSE_THE_LOOP"],
       evidence:        [
@@ -329,7 +329,7 @@ describe("validatePlanningLoop", () => {
 
   it("P_PLAN_CLOSE_THE_LOOP with verification evidence → passes", () => {
     const result = validatePlanningLoop(makeDecl({
-      phase:           "PLAN",
+      phase:           "DESIGN",
       type:            "planning",
       principals_used: ["P_PLAN_CLOSE_THE_LOOP", "P_PLAN_BOTTLENECK_FIRST"],
       evidence:        [

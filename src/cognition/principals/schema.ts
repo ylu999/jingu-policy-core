@@ -5,7 +5,15 @@
  * This is the input type consumed by all p174 validators.
  */
 
+import type { Phase } from "jingu-protocol"
 import type { PrincipalId } from "./taxonomy.js"
+
+/**
+ * Backward-compat alias — consumers that import CognitionPhase
+ * from this module continue to work. The canonical type is Phase
+ * from jingu-protocol.
+ */
+export type CognitionPhase = Phase
 
 // ── Evidence ──────────────────────────────────────────────────────────────────
 
@@ -30,18 +38,8 @@ export interface Attribution {
 
 // ── CognitionDeclaration ──────────────────────────────────────────────────────
 
-export type CognitionPhase =
-  | "UNDERSTAND"
-  | "OBSERVE"
-  | "ANALYZE"
-  | "DECIDE"
-  | "DESIGN"
-  | "PLAN"
-  | "EXECUTE"
-  | "VALIDATE"
-
 export interface CognitionDeclaration {
-  phase:           CognitionPhase
+  phase:           Phase
   type:            string          // CDP taxonomy type (debugging / reasoning / design / ...)
   subtype?:        string
   principals_used: PrincipalId[]

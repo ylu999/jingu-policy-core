@@ -8,7 +8,7 @@
  * L3 runtime enforcement is in run_with_jingu_gate.py (p186–p192).
  */
 
-export type Phase = "OBSERVE" | "ANALYZE" | "EXECUTE" | "JUDGE" | "VERIFY";
+import type { Phase } from "jingu-protocol";
 
 export interface PhaseContract {
   /** Required principals — must be declared in PhaseRecord.principals */
@@ -29,7 +29,7 @@ export interface PhaseContract {
  * - P4: Phase Boundaries Must Be Strict
  * - P7: Cognition Must Be Declared and Validated
  */
-export const PHASE_CONTRACTS: Record<Phase, PhaseContract> = {
+export const PHASE_CONTRACTS: Partial<Record<Phase, PhaseContract>> = {
   OBSERVE: {
     required_principals: [],
     required_fields: ["evidence_refs"],
@@ -58,12 +58,6 @@ export const PHASE_CONTRACTS: Record<Phase, PhaseContract> = {
     principle_ref: "P2 — Typed Contracts; P7 — Declared Cognition",
   },
 
-  VERIFY: {
-    required_principals: [],
-    required_fields: [],
-    forbidden_actions: ["write_patch"],
-    principle_ref: "P3 — Admit or Reject; P8 — In-Loop Governance",
-  },
 };
 
 // ── Invariant check functions ─────────────────────────────────────────────────
@@ -99,10 +93,8 @@ export function checkPhaseContract(
     };
   }
 
-  const normalizedPrincipals = principals.map((p) => p.toLowerCase());
-
   const missing_principals = contract.required_principals.filter(
-    (req) => !normalizedPrincipals.includes(req.toLowerCase()),
+    (req) => !principals.includes(req),
   );
 
   const missing_fields = contract.required_fields.filter(
